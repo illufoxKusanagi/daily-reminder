@@ -1,0 +1,88 @@
+# ============================================
+# Node.js / Next.js
+# ============================================
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Next.js
+.next/
+out/
+
+# Production builds
+/build
+/coverage
+
+# Environment files
+.env*
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# ============================================
+# Qt / C++
+# ============================================
+# Build artifacts
+*.o
+*.obj
+*.user
+*.pro.user
+*.autosave
+moc_*
+qrc_*
+ui_*
+Makefile*
+build/
+build-*/
+CMakeLists.txt.user
+
+# Qt Creator
+*.user.*
+
+# ============================================
+# IDE & Editors
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ============================================
+# Operating System
+# ============================================
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# ============================================
+# Logs
+# ============================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ============================================
+# Application Data
+# ============================================
+# Uncomment if you don't want to commit user data
+# tasks.json
+*.db
+*.sqlite
+
+# ============================================
+# Miscellaneous
+# ============================================
+/docs

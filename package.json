@@ -1,0 +1,16 @@
+{
+  "name": "daily-reminder",
+  "version": "1.0.0",
+  "description": "Daily Task Reminder - Qt + Next.js Desktop Application",
+  "scripts": {
+    "dev": "./dev.sh dev",
+    "build": "./dev.sh build",
+    "run": "./dev.sh run",
+    "clean": "./dev.sh clean"
+  },
+  "workspaces": [
+    "frontend"
+  ],
+  "devDependencies": {},
+  "dependencies": {}
+}
