@@ -10,7 +10,8 @@
     "seed": "tsx scripts/seed-events.ts",
     "alarm": "./scripts/test-alarm.sh",
     "build:rpm": "./build-rpm-new.sh",
-    "build:windows": "./build-windows.bat"
+    "build:windows": "./build-windows.bat",
+    "build:windows-cross": "./build-windows-cross.sh"
   },
   "workspaces": [
     "frontend"

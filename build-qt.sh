@@ -7,7 +7,11 @@ echo "🔨 Building Daily Reminder with Qt/CMake..."
 
 PROJECT_ROOT=$(pwd)
 BUILD_DIR="$PROJECT_ROOT/backend/build"
+OUTPUT_DIR="$PROJECT_ROOT/output"
 INSTALL_PREFIX="/usr/local"
+
+# Create output directory
+mkdir -p "$OUTPUT_DIR"
 
 # 1. Build frontend
 echo "📦 Building frontend..."
@@ -28,16 +32,25 @@ cmake -DCMAKE_BUILD_TYPE=Release \
 echo "🔨 Building backend..."
 cmake --build . -j$(nproc)
 
+# Copy binary to output directory
+echo "📦 Copying binary to output directory..."
+cp backend "$OUTPUT_DIR/daily-reminder"
+
+# Copy frontend to output directory (next to binary)
+echo "📦 Copying frontend files..."
+mkdir -p "$OUTPUT_DIR/frontend"
+cp -r "$PROJECT_ROOT/frontend/out/"* "$OUTPUT_DIR/frontend/"
+
 echo ""
 echo "========================================="
 echo "✅ Build completed successfully!"
 echo "========================================="
 echo ""
-echo "Binary location: $BUILD_DIR/backend"
-echo "Frontend built at: $PROJECT_ROOT/frontend/out/"
+echo "Binary location: $OUTPUT_DIR/daily-reminder"
+echo "Frontend files: $OUTPUT_DIR/frontend/"
 echo ""
 echo "To run locally:"
-echo "  cd backend/build && ./backend"
+echo "  ./output/daily-reminder"
 echo ""
 echo "To install system-wide (requires root):"
 echo "  sudo cmake --install $BUILD_DIR"

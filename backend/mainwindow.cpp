@@ -8,6 +8,8 @@
 #include <QWebEngineProfile>
 #include <QUrl>
 #include <QFile>
+#include <QDir>
+#include <QCoreApplication>
 #include <QDebug>
 #include <QCloseEvent>
 #include <QAction>
@@ -131,6 +133,39 @@ void MainWindow::setupWebView()
     settings->setAttribute(QWebEngineSettings::LocalContentCanAccessFileUrls, true);
     settings->setAttribute(QWebEngineSettings::AllowRunningInsecureContent, true);
 
-    qDebug() << "Loading frontend from http://localhost:3000";
-    m_webView->load(QUrl("http://localhost:3000"));
+    // Try to find frontend build directory
+    QStringList frontendPaths = {
+        QCoreApplication::applicationDirPath() + "/frontend/index.html",
+        QCoreApplication::applicationDirPath() + "/../share/daily-reminder/index.html",
+        QDir::currentPath() + "/frontend/out/index.html",
+        "/usr/share/daily-reminder/index.html",
+        "/usr/local/share/daily-reminder/index.html"};
+
+    QString frontendPath;
+    for (const QString &path : frontendPaths)
+    {
+        if (QFile::exists(path))
+        {
+            frontendPath = path;
+            qDebug() << "✅ Found frontend at:" << frontendPath;
+            break;
+        }
+    }
+
+    if (!frontendPath.isEmpty())
+    {
+        QUrl url = QUrl::fromLocalFile(frontendPath);
+        qDebug() << "Loading frontend from:" << url.toString();
+        m_webView->load(url);
+    }
+    else
+    {
+        qWarning() << "❌ Frontend not found! Tried paths:";
+        for (const QString &path : frontendPaths)
+        {
+            qWarning() << "  -" << path;
+        }
+        qDebug() << "Falling back to http://localhost:3000";
+        m_webView->load(QUrl("http://localhost:3000"));
+    }
 }

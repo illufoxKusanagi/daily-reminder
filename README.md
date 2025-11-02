@@ -648,11 +648,46 @@ windeployqt.exe backend.exe
 ### Linux .rpm (Fedora/RedHat)
 
 ```bash
-# Create rpm package using rpmbuild
-# Requires: rpm-build package
+# Quick build with automated script
+npm run build:rpm
 
-rpmbuild -bb daily-reminder.spec
+# Output: output/daily-reminder-1.0.0-1.fc42.x86_64.rpm
+
+# Install
+sudo rpm -ivh output/daily-reminder-*.rpm
 ```
+
+### Windows .exe
+
+**Option 1: Build on Windows (Recommended)**
+```cmd
+npm run build:windows
+# Output: output/DailyReminder/backend.exe
+```
+
+**Option 2: Cross-compile from Linux**
+```bash
+# Requires: mingw-w64 toolchain and Qt for Windows
+npm run build:windows-cross
+# Output: output/windows/DailyReminder/backend.exe
+```
+
+Requirements for cross-compilation:
+- Install mingw-w64: `sudo dnf install mingw64-gcc-c++`
+- Install Qt for Windows (MinGW): Download from qt.io
+- Set Qt path: `export QT_WIN_PATH=$HOME/Qt/6.9.0/mingw_64`
+
+### Qt Build (Development)
+
+```bash
+# Build using Qt/CMake
+./build-qt.sh
+
+# Output: output/daily-reminder
+# Run: ./output/daily-reminder
+```
+
+> **Note**: All build scripts output to the `output/` directory
 
 ## 🤝 Contributing
 

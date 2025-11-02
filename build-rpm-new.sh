@@ -5,8 +5,10 @@ set -e
 
 echo "🔨 Building Daily Reminder RPM package..."
 
-# Get project root
+# Get project root and setup output directory
 PROJECT_ROOT=$(pwd)
+OUTPUT_DIR="$PROJECT_ROOT/output"
+mkdir -p "$OUTPUT_DIR"
 
 # 1. Build frontend
 echo "📦 Building frontend..."
@@ -93,8 +95,8 @@ SPEC
 echo "📦 Building RPM..."
 rpmbuild -bb ~/rpmbuild/SPECS/daily-reminder.spec
 
-# Copy RPM to project directory
-cp ~/rpmbuild/RPMS/x86_64/daily-reminder-*.rpm "$PROJECT_ROOT/"
+# Copy RPM to output directory
+cp ~/rpmbuild/RPMS/x86_64/daily-reminder-*.rpm "$OUTPUT_DIR/"
 
 # Cleanup
 rm -rf "$INSTALL_DIR"
@@ -105,10 +107,10 @@ echo "========================================="
 echo "✅ RPM package built successfully!"
 echo "========================================="
 echo ""
-ls -lh "$PROJECT_ROOT"/*.rpm
+ls -lh "$OUTPUT_DIR"/*.rpm
 echo ""
 echo "To install:"
-echo "  sudo rpm -ivh daily-reminder-*.rpm"
+echo "  sudo rpm -ivh output/daily-reminder-*.rpm"
 echo ""
 echo "To uninstall:"
 echo "  sudo rpm -e daily-reminder"

@@ -39,28 +39,28 @@ cd ..\..\..
 REM 4. Create distribution folder
 echo.
 echo [4/4] Creating distribution package...
-mkdir dist 2>nul
-xcopy /E /I /Y backend\build\Release dist\DailyReminder
-xcopy /E /I /Y frontend\out dist\DailyReminder\frontend
+mkdir output 2>nul
+xcopy /E /I /Y backend\build\Release output\DailyReminder
+xcopy /E /I /Y frontend\out output\DailyReminder\frontend
 
 REM Create run script
 (
 echo @echo off
 echo start "" "%%~dp0backend.exe"
-) > dist\DailyReminder\DailyReminder.bat
+) > output\DailyReminder\DailyReminder.bat
 
 echo.
 echo ========================================
 echo Build completed successfully!
 echo ========================================
 echo.
-echo Executable location: dist\DailyReminder\backend.exe
+echo Executable location: output\DailyReminder\backend.exe
 echo.
-echo To run: double-click dist\DailyReminder\DailyReminder.bat
+echo To run: double-click output\DailyReminder\DailyReminder.bat
 echo.
 echo Optional: Use Inno Setup to create installer:
 echo   1. Download Inno Setup from https://jrsoftware.org/isdl.php
-echo   2. Create installer script pointing to dist\DailyReminder
+echo   2. Create installer script pointing to output\DailyReminder
 echo   3. Compile to create setup.exe
 echo.
 pause
