@@ -24,7 +24,6 @@ private:
     void setupRoutes();
     QJsonObject parseRequestBody(const QHttpServerRequest &request);
 
-    // Helper methods
     QHttpServerResponse jsonResponse(const QJsonObject &obj, QHttpServerResponse::StatusCode code = QHttpServerResponse::StatusCode::Ok);
     QHttpServerResponse jsonResponse(const QJsonArray &arr, QHttpServerResponse::StatusCode code = QHttpServerResponse::StatusCode::Ok);
     QHttpServerResponse errorResponse(const QString &message, QHttpServerResponse::StatusCode code = QHttpServerResponse::StatusCode::BadRequest);

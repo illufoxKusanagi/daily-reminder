@@ -6,6 +6,7 @@
 #include <QJsonArray>
 #include <QTimer>
 #include <QMap>
+#include <QSystemTrayIcon>
 
 class AlarmManager : public QObject
 {
@@ -13,9 +14,10 @@ class AlarmManager : public QObject
 
 public:
     explicit AlarmManager(QObject *parent = nullptr);
+    void setSystemTrayIcon(QSystemTrayIcon *trayIcon);
 
-    void checkAlarms();  // Check and trigger alarms
-    void reloadAlarms(); // Reload alarms from database (call after event changes)
+    void checkAlarms();
+    void reloadAlarms();
 
 signals:
     void alarmTriggered(const QString &eventId, const QString &title);
@@ -25,10 +27,12 @@ private slots:
 
 private:
     QTimer *m_checkTimer;
-    QMap<QString, QDateTime> m_activeAlarms; // eventId -> trigger time
+    QMap<QString, QDateTime> m_activeAlarms;
+    QSystemTrayIcon *m_trayIcon;
 
     void loadActiveAlarms();
     void showNotification(const QString &eventId, const QString &title, const QString &category, const QString &startTime);
+    void playAlarmSound();
 };
 
 #endif

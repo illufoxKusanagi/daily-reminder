@@ -26,7 +26,6 @@ Database::~Database()
 
 bool Database::initialize()
 {
-    // Set database path
     QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     QDir dir;
     if (!dir.exists(dataDir))
@@ -53,7 +52,6 @@ bool Database::createTables()
 {
     QSqlQuery query(m_db);
 
-    // Events table (personal daily activities)
     QString createEvents = R"(
         CREATE TABLE IF NOT EXISTS events (
             id TEXT PRIMARY KEY,

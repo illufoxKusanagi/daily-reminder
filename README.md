@@ -2,7 +2,10 @@
 
 A desktop calendar application for managing daily activities with reminders, built with Qt 6 (backend REST API) and Next.js (frontend UI).
 
-> ⚠️ **Platform Support**: This application has been tested and verified to work on **Linux** only. Windows and macOS support is experimental and some features (especially desktop notifications) may not work properly.
+> ⚠️ **Platform Support**: 
+> - **Linux**: Fully tested and supported (uses `notify-send` for desktop notifications)
+> - **Windows**: Experimental support (uses PowerShell toast notifications)
+> - **macOS**: Experimental support (uses `osascript` for notifications)
 
 ## 🏗️ Architecture Overview
 
@@ -201,7 +204,9 @@ All API endpoints are served by the Qt backend on `http://localhost:8080`.
 - CMake 3.16+
 - C++17 compiler (GCC, Clang, or MSVC)
 - SQLite (included with Qt)
-- **Linux**: `notify-send` (libnotify) for desktop notifications
+- **Linux**: `notify-send` (libnotify) and `paplay` or `aplay` for sound
+- **macOS**: Built-in notification system
+- **Windows**: QSystemTrayIcon for notifications
 
 ## 🚀 Quick Start
 
@@ -222,8 +227,7 @@ brew install qt@6
 **Windows:**
 - Download Qt from https://www.qt.io/download
 - Install Qt with WebEngine and HttpServer modules
-
-⚠️ Note: Desktop notifications are not implemented for Windows yet.
+- Ensure PowerShell is available (default in Windows 10/11)
 
 ### 2. Install Node.js
 ```bash
@@ -550,23 +554,105 @@ cmake --build .
    npm run build
    ```
 
-2. Build Qt backend:
+2. Build Qt backend in Release mode:
    ```bash
    cd backend/build
+   cmake -DCMAKE_BUILD_TYPE=Release ..
    cmake --build . --config Release
    ```
 
-3. Deploy Qt app:
+3. Deploy the application:
+
+   **Linux - AppImage:**
    ```bash
-   # Linux
-   linuxdeployqt DailyReminder -appimage
+   # Install linuxdeploy
+   wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+   wget https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+   chmod +x linuxdeploy*.AppImage
    
-   # macOS
-   macdeployqt DailyReminder.app -dmg
-   
-   # Windows
-   windeployqt DailyReminder.exe
+   # Create AppImage
+   ./linuxdeploy-x86_64.AppImage --appdir AppDir --executable backend/build/backend --plugin qt --output appimage
    ```
+
+   **Linux - Create .deb package:**
+   ```bash
+   # Install checkinstall
+   sudo apt-get install checkinstall
+   
+   # Build and create .deb
+   cd backend/build
+   sudo checkinstall --pkgname=daily-reminder --pkgversion=1.0.0 --default
+   ```
+
+   **Windows - Portable .exe:**
+   ```bash
+   # After building in Release mode
+   cd backend/build/Release
+   
+   # Deploy Qt dependencies
+   windeployqt.exe backend.exe
+   
+   # Create installer using Inno Setup or NSIS (optional)
+   ```
+
+   **macOS - .app bundle:**
+   ```bash
+   # After building in Release mode
+   cd backend/build
+   macdeployqt backend.app -dmg
+   ```
+
+## 📦 Building Distributable Packages
+
+### Linux AppImage (Recommended)
+
+```bash
+# 1. Build frontend
+cd frontend
+npm run build
+
+# 2. Build backend
+cd ../backend
+mkdir -p build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr ..
+make -j$(nproc)
+
+# 3. Create AppImage
+cd ../..
+mkdir -p AppDir/usr/bin
+cp backend/build/backend AppDir/usr/bin/
+cp -r frontend/out AppDir/usr/share/frontend
+
+# Use linuxdeploy to bundle everything
+./linuxdeploy-x86_64.AppImage --appdir AppDir \
+  --executable AppDir/usr/bin/backend \
+  --plugin qt \
+  --output appimage
+```
+
+### Windows .exe
+
+```bash
+# 1. Build in Release mode using Qt Creator or CMake
+cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake --build . --config Release
+
+# 2. Deploy Qt libraries
+cd Release
+windeployqt.exe backend.exe
+
+# 3. (Optional) Create installer with Inno Setup
+# Download from: https://jrsoftware.org/isdl.php
+```
+
+### Linux .rpm (Fedora/RedHat)
+
+```bash
+# Create rpm package using rpmbuild
+# Requires: rpm-build package
+
+rpmbuild -bb daily-reminder.spec
+```
 
 ## 🤝 Contributing
 

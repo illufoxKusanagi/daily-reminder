@@ -9,7 +9,6 @@
 
 int main(int argc, char *argv[])
 {
-    // Parse command line arguments
     bool headless = false;
     quint16 port = 8080;
 
@@ -28,25 +27,21 @@ int main(int argc, char *argv[])
 
     if (headless)
     {
-        // Headless mode: Backend server only (no GUI)
         QCoreApplication app(argc, argv);
         QCoreApplication::setOrganizationName("DailyReminder");
         QCoreApplication::setApplicationName("Daily Activity Reminder");
 
         qInfo() << "🚀 Starting Daily Reminder Backend (Headless Mode)";
 
-        // Initialize database
         if (!Database::instance().initialize())
         {
             qCritical() << "❌ Failed to initialize database!";
             return 1;
         }
 
-        // Create managers
         ActivityManager activityManager;
         AlarmManager alarmManager;
 
-        // Start HTTP server
         HttpServer server(&activityManager, &alarmManager);
         if (server.start(port))
         {
@@ -72,13 +67,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        // GUI mode: Qt Application with WebEngine
-
-        // Disable web security to allow CORS requests from localhost:3000 to localhost:8080
         qputenv("QTWEBENGINE_CHROMIUM_FLAGS", "--disable-web-security --allow-running-insecure-content");
-
-        QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-        QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
         QApplication app(argc, argv);
 
         QCoreApplication::setOrganizationName("DailyReminder");

@@ -79,7 +79,6 @@ QJsonObject HttpServer::parseRequestBody(const QHttpServerRequest &request)
 
 void HttpServer::setupRoutes()
 {
-    // Helper function to add CORS headers to any response
     auto addCorsHeaders = [](QHttpServerResponse response)
     {
         QHttpHeaders headers = response.headers();
@@ -110,7 +109,6 @@ void HttpServer::setupRoutes()
 
     // ============ EVENT ROUTES (Calendar API) ============
 
-    // GET /api/event - List all events
     m_server->route("/api/event", QHttpServerRequest::Method::Get,
                     [this, addCorsHeaders]()
                     {
@@ -119,7 +117,6 @@ void HttpServer::setupRoutes()
                         return addCorsHeaders(jsonResponse(events));
                     });
 
-    // POST /api/event - Create new event
     m_server->route("/api/event", QHttpServerRequest::Method::Post,
                     [this, addCorsHeaders](const QHttpServerRequest &request)
                     {
@@ -134,7 +131,6 @@ void HttpServer::setupRoutes()
                             return addCorsHeaders(errorResponse(event["error"].toString()));
                         }
 
-                        // Reload alarms if this event has a reminder
                         if (data.value("isReminderEnabled").toBool(false))
                         {
                             m_alarmManager->reloadAlarms();
@@ -170,7 +166,6 @@ void HttpServer::setupRoutes()
                             return addCorsHeaders(errorResponse(event["error"].toString()));
                         }
 
-                        // Reload alarms if reminder settings changed
                         if (data.contains("isReminderEnabled") || data.contains("reminderTime"))
                         {
                             m_alarmManager->reloadAlarms();
@@ -191,14 +186,12 @@ void HttpServer::setupRoutes()
                             return addCorsHeaders(errorResponse("Failed to delete event"));
                         }
 
-                        // Reload alarms after deletion
                         m_alarmManager->reloadAlarms();
                         qInfo() << "⏰ Reloaded alarms after deleting event";
 
                         return addCorsHeaders(jsonResponse(QJsonObject{{"message", "Event deleted successfully"}}));
                     });
 
-    // Simple status endpoint
     m_server->route("/status", QHttpServerRequest::Method::Get,
                     [addCorsHeaders]()
                     {

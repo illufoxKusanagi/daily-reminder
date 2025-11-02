@@ -65,9 +65,9 @@ export function Calendar() {
   return (
     <CalendarProvider events={events} view="bulan">
       <DndProvider showConfirmation={false}>
-        <div className="w-full border rounded-xl overflow-hidden">
+        <div className="w-full h-full flex flex-col border rounded-xl overflow-hidden">
           <CalendarHeader />
-          <div className="overflow-auto max-h-[calc(100vh-200px)] sm:max-h-[calc(100vh-160px)]">
+          <div className="flex-1 overflow-auto">
             <CalendarBody />
           </div>
         </div>

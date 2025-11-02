@@ -37,7 +37,6 @@ import {
 } from "@/components/ui/table";
 import { Activity } from "@/types/backend-props";
 
-// Define columns for activities
 export const columns: ColumnDef<Activity>[] = [
   {
     id: "select",
@@ -116,7 +115,6 @@ export const columns: ColumnDef<Activity>[] = [
     enableHiding: false,
     cell: ({ row, table }) => {
       const activity = row.original;
-      // Get the onDelete function from table meta
       const meta = table.options.meta as { onDelete?: (id: number) => void };
 
       return (
@@ -131,7 +129,6 @@ export const columns: ColumnDef<Activity>[] = [
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem
               onClick={() => {
-                // Toggle completion status
                 fetch(
                   `http://localhost:8080/api/activities/${activity.id}/complete`,
                   {
@@ -176,7 +173,6 @@ export function DataTable({ onAddActivity }: DataTableProps) {
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
 
-  // Fetch activities from Qt backend
   const fetchActivities = async () => {
     try {
       setLoading(true);
@@ -191,7 +187,6 @@ export function DataTable({ onAddActivity }: DataTableProps) {
     }
   };
 
-  // Delete activity
   const handleDelete = async (id: number) => {
     if (!confirm("Are you sure you want to delete this activity?")) return;
 
@@ -205,7 +200,6 @@ export function DataTable({ onAddActivity }: DataTableProps) {
 
       if (!response.ok) throw new Error("Failed to delete");
 
-      // Refresh the list
       await fetchActivities();
     } catch (error) {
       console.error("Error deleting activity:", error);
@@ -213,7 +207,6 @@ export function DataTable({ onAddActivity }: DataTableProps) {
     }
   };
 
-  // Load data on mount
   React.useEffect(() => {
     fetchActivities();
   }, []);

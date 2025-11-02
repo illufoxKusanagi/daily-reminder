@@ -8,7 +8,7 @@ import { useCalendar } from "@/modules/calendar/contexts/calendar-context";
 import { AgendaEvents } from "@/modules/calendar/views/agenda-view/agenda-events";
 import { CalendarMonthView } from "@/modules/calendar/views/month-view/calendar-month-view";
 import { CalendarWeekView } from "@/modules/calendar/views/week-and-day-view/calendar-week-view";
-import { CalendarDayView } from "@/modules/calendar/views/week-and-day-view/calendar-day-view";
+// import { CalendarDayView } from "@/modules/calendar/views/week-and-day-view/calendar-day-view";
 import { CalendarYearView } from "@/modules/calendar/views/year-view/calendar-year-view";
 
 export function CalendarBody() {
@@ -48,12 +48,12 @@ export function CalendarBody() {
             multiDayEvents={multiDayEvents}
           />
         )}
-        {view === "hari" && (
+        {/* {view === "hari" && (
           <CalendarDayView
             singleDayEvents={singleDayEvents}
             multiDayEvents={multiDayEvents}
           />
-        )}
+        )} */}
         {view === "tahun" && (
           <CalendarYearView
             singleDayEvents={singleDayEvents}

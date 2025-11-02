@@ -19,7 +19,6 @@ export const eventSchema = z
   })
   .refine(
     (data) => {
-      // If reminder is enabled, reminderTime must be set
       if (data.isReminderEnabled && !data.reminderTime) {
         return false;
       }

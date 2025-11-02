@@ -13,14 +13,12 @@ class ActivityManager : public QObject
 public:
     explicit ActivityManager(QObject *parent = nullptr);
 
-    // CRUD Operations
     QJsonObject createActivity(const QJsonObject &data);
     QJsonArray getAllActivities();
     QJsonObject getActivityById(const QString &id);
     QJsonObject updateActivity(const QString &id, const QJsonObject &data);
     bool deleteActivity(const QString &id);
 
-    // Additional queries
     QJsonArray getActivitiesByDate(const QString &date);
     QJsonArray getUpcomingActivities();
     bool markAsCompleted(const QString &id, bool completed);

@@ -21,7 +21,6 @@ class ApiClient {
     return response.json();
   }
 
-  // Activity endpoints
   async getActivities(): Promise<Activity[]> {
     return this.request("/activities");
   }
@@ -64,7 +63,6 @@ class ApiClient {
     return this.request("/activities/upcoming");
   }
 
-  // Alarm endpoints
   async createAlarm(alarm: Omit<Alarm, "id" | "isActive">): Promise<Alarm> {
     return this.request("/alarms", {
       method: "POST",

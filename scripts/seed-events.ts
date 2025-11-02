@@ -27,7 +27,6 @@ interface IEvent {
 
 const API_BASE_URL = "http://localhost:8080";
 
-// Color palette for variety
 const COLORS: IEvent["color"][] = [
   "blue",
   "green",
@@ -37,7 +36,6 @@ const COLORS: IEvent["color"][] = [
   "orange",
 ];
 
-// Personal activity categories
 const CATEGORIES = [
   "Work",
   "Personal",

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { api, Activity } from "@/lib/api";
+import { api } from "@/lib/api";
+import { Activity } from "@/types/backend-props";
 
 export function useActivities() {
   const [activities, setActivities] = useState<Activity[]>([]);

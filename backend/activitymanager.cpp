@@ -15,7 +15,6 @@ QJsonObject ActivityManager::createActivity(const QJsonObject &data)
 {
     QSqlQuery query(Database::instance().db());
 
-    // Generate UUID for event id
     QString id = QUuid::createUuid().toString(QUuid::WithoutBraces);
 
     query.prepare(R"(
@@ -31,14 +30,13 @@ QJsonObject ActivityManager::createActivity(const QJsonObject &data)
     query.bindValue(":color", data["color"].toString());
     query.bindValue(":description", data["description"].toString(""));
 
-    // Handle optional reminder time (can be NULL)
     if (data.contains("reminderTime") && !data["reminderTime"].toString().isEmpty())
     {
         query.bindValue(":reminder_time", data["reminderTime"].toString());
     }
     else
     {
-        query.bindValue(":reminder_time", QVariant(QVariant::String));
+        query.bindValue(":reminder_time", QVariant(QMetaType::fromType<QString>()));
     }
 
     query.bindValue(":is_reminder_enabled", data["isReminderEnabled"].toBool(false) ? 1 : 0);
@@ -114,14 +112,13 @@ QJsonObject ActivityManager::updateActivity(const QString &id, const QJsonObject
     query.bindValue(":color", data["color"].toString());
     query.bindValue(":description", data["description"].toString(""));
 
-    // Handle optional reminder time (can be NULL)
     if (data.contains("reminderTime") && !data["reminderTime"].toString().isEmpty())
     {
         query.bindValue(":reminder_time", data["reminderTime"].toString());
     }
     else
     {
-        query.bindValue(":reminder_time", QVariant(QVariant::String));
+        query.bindValue(":reminder_time", QVariant(QMetaType::fromType<QString>()));
     }
 
     query.bindValue(":is_reminder_enabled", data["isReminderEnabled"].toBool(false) ? 1 : 0);
@@ -205,8 +202,6 @@ QJsonArray ActivityManager::getUpcomingActivities()
 
 bool ActivityManager::markAsCompleted(const QString &id, bool completed)
 {
-    // This method is deprecated for calendar events
-    // Keeping for backward compatibility but does nothing
     qDebug() << "markAsCompleted called but not implemented for events";
     return true;
 }

@@ -4,27 +4,24 @@
 #include <QSqlError>
 #include <QDateTime>
 #include <QDebug>
-#include <QApplication>
-
-#if defined(Q_OS_WIN)
-#include <QSystemTrayIcon>
-#elif defined(Q_OS_LINUX)
 #include <QProcess>
-#elif defined(Q_OS_MACOS)
-#include <QProcess>
-#endif
+#include <QFile>
 
 AlarmManager::AlarmManager(QObject *parent)
-    : QObject(parent)
+    : QObject(parent), m_trayIcon(nullptr)
 {
-    // Check alarms every 30 seconds for better responsiveness
     m_checkTimer = new QTimer(this);
     connect(m_checkTimer, &QTimer::timeout, this, &AlarmManager::onTimerTimeout);
-    m_checkTimer->start(30000); // 30 seconds
+    m_checkTimer->start(10000);
 
     loadActiveAlarms();
 
     qInfo() << "⏰ AlarmManager started - checking every 30 seconds";
+}
+
+void AlarmManager::setSystemTrayIcon(QSystemTrayIcon *trayIcon)
+{
+    m_trayIcon = trayIcon;
 }
 
 void AlarmManager::reloadAlarms()
@@ -36,11 +33,10 @@ void AlarmManager::checkAlarms()
 {
     QDateTime now = QDateTime::currentDateTime();
 
-    // Debug: Show that we're checking
     static int checkCount = 0;
     checkCount++;
     if (checkCount % 10 == 1)
-    { // Log every 10th check to avoid spam
+    {
         qInfo() << "⏰ Checking alarms... (check #" << checkCount << ")";
     }
 
@@ -62,7 +58,7 @@ void AlarmManager::checkAlarms()
     int triggeredCount = 0;
     while (query.next())
     {
-        QString eventId = query.value("id").toString(); // Fixed: ID is TEXT, not INTEGER
+        QString eventId = query.value("id").toString();
         QString title = query.value("title").toString();
         QString category = query.value("category").toString();
         QString reminderTime = query.value("reminder_time").toString();
@@ -71,12 +67,11 @@ void AlarmManager::checkAlarms()
         qInfo() << "🔔 ALARM TRIGGERED!" << "Event:" << title << "Category:" << category << "ID:" << eventId;
 
         showNotification(eventId, title, category, startDate);
-        emit alarmTriggered(eventId, title); // Now using QString for eventId
+        emit alarmTriggered(eventId, title);
 
-        // Disable the reminder so it doesn't trigger again
         QSqlQuery updateQuery(Database::instance().db());
         updateQuery.prepare("UPDATE events SET is_reminder_enabled = 0 WHERE id = :id");
-        updateQuery.bindValue(":id", eventId); // Use QString, not int
+        updateQuery.bindValue(":id", eventId);
         if (!updateQuery.exec())
         {
             qWarning() << "❌ Failed to disable reminder for event" << eventId << ":" << updateQuery.lastError().text();
@@ -92,7 +87,6 @@ void AlarmManager::checkAlarms()
     if (triggeredCount > 0)
     {
         qInfo() << "✅ Triggered" << triggeredCount << "alarm(s)";
-        // Reload active alarms after triggering to update the count
         loadActiveAlarms();
     }
 }
@@ -104,7 +98,6 @@ void AlarmManager::onTimerTimeout()
 
 void AlarmManager::loadActiveAlarms()
 {
-    // Query events table for upcoming reminders using SQLite datetime functions
     QSqlQuery query(Database::instance().db());
     query.prepare(R"(
         SELECT id, title, reminder_time
@@ -125,14 +118,14 @@ void AlarmManager::loadActiveAlarms()
 
     while (query.next())
     {
-        QString id = query.value("id").toString(); // Fixed: ID is TEXT
+        QString id = query.value("id").toString();
         QString title = query.value("title").toString();
         QString timeStr = query.value("reminder_time").toString();
         QDateTime triggerTime = QDateTime::fromString(timeStr, Qt::ISODate);
 
         if (triggerTime.isValid())
         {
-            m_activeAlarms[id] = triggerTime; // Map now uses QString keys
+            m_activeAlarms[id] = triggerTime;
             count++;
         }
     }
@@ -152,33 +145,96 @@ void AlarmManager::showNotification(const QString &eventId, const QString &title
     qInfo() << "🔔 Start Time:" << startTime;
     qInfo() << "🔔 ================================";
 
+    // Play alarm sound
+    playAlarmSound();
+
 #if defined(Q_OS_LINUX)
-    // Use notify-send on Linux
+    // On Linux, always use notify-send (more reliable than QSystemTrayIcon)
     QProcess::startDetached("notify-send",
                             QStringList() << "-u" << "critical"
                                           << "-i" << "appointment-soon"
+                                          << "-t" << "10000" // Show for 10 seconds
                                           << QString("Daily Reminder: %1").arg(title)
                                           << message);
+    qInfo() << "✅ Linux notification sent via notify-send";
 
 #elif defined(Q_OS_MACOS)
-    // Use osascript for macOS notifications
     QString script = QString("display notification \"%1\" with title \"Daily Reminder: %2\" sound name \"default\"")
                          .arg(message.replace("\"", "\\\""), title.replace("\"", "\\\""));
     QProcess::startDetached("osascript", QStringList() << "-e" << script);
+    qInfo() << "✅ macOS notification sent via osascript";
 
 #elif defined(Q_OS_WIN)
-    // Windows: Could use QSystemTrayIcon or Windows Toast notifications
-    // For now, just log (you can add Windows-specific notification later)
-    qInfo() << "💡 To enable Windows notifications, integrate QSystemTrayIcon or Windows Toast API";
-
-#else
-    qInfo() << "⚠️ Platform-specific notifications not configured for this OS";
+    // On Windows, use QSystemTrayIcon
+    if (m_trayIcon && m_trayIcon->isVisible() && m_trayIcon->supportsMessages())
+    {
+        m_trayIcon->showMessage(
+            QString("Daily Reminder: %1").arg(title),
+            message,
+            QSystemTrayIcon::Information,
+            10000 // Show for 10 seconds
+        );
+        qInfo() << "✅ Windows notification sent via system tray";
+    }
+    else
+    {
+        qWarning() << "⚠️ System tray not available on Windows";
+    }
 #endif
 
-    // Also try to show application notification if running with GUI
-    if (QApplication::instance())
+// Also show in system tray as backup (if available and not already shown)
+#if !defined(Q_OS_WIN)
+    if (m_trayIcon && m_trayIcon->isVisible() && m_trayIcon->supportsMessages())
     {
-        // Could show QMessageBox or custom dialog here if needed
-        qInfo() << "📱 GUI is available - could show in-app notification";
+        m_trayIcon->showMessage(
+            QString("Daily Reminder: %1").arg(title),
+            message,
+            QSystemTrayIcon::Information,
+            10000);
     }
+#endif
+}
+
+void AlarmManager::playAlarmSound()
+{
+#if defined(Q_OS_LINUX)
+    // Try multiple sound files in order of preference
+    QStringList soundFiles = {
+        "/usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga",
+        "/usr/share/sounds/freedesktop/stereo/complete.oga",
+        "/usr/share/sounds/freedesktop/stereo/bell.oga",
+        "/usr/share/sounds/sound-icons/xylofon.wav"};
+
+    for (const QString &soundFile : soundFiles)
+    {
+        if (QFile::exists(soundFile))
+        {
+            // Try paplay first (PulseAudio)
+            if (QProcess::startDetached("paplay", QStringList() << soundFile))
+            {
+                qInfo() << "🔊 Playing alarm sound:" << soundFile;
+                return;
+            }
+            // Fallback to aplay (ALSA)
+            if (QProcess::startDetached("aplay", QStringList() << soundFile))
+            {
+                qInfo() << "🔊 Playing alarm sound:" << soundFile;
+                return;
+            }
+        }
+    }
+
+    // Last resort: system beep
+    QProcess::startDetached("beep", QStringList() << "-f" << "1000" << "-l" << "500" << "-r" << "3");
+    qInfo() << "🔊 Using system beep";
+
+#elif defined(Q_OS_MACOS)
+    QProcess::startDetached("afplay", QStringList() << "/System/Library/Sounds/Glass.aiff");
+    qInfo() << "🔊 Playing macOS system sound";
+
+#elif defined(Q_OS_WIN)
+    // Windows: Play system sound
+    QProcess::startDetached("powershell", QStringList() << "-Command" << "[console]::beep(1000,500)");
+    qInfo() << "🔊 Playing Windows beep";
+#endif
 }
