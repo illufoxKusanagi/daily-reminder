@@ -13,7 +13,7 @@ import {
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react";
+import { ArrowUpDown, ChevronDown, Trash2, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -35,48 +35,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Activity } from "@/types/backend-props";
 
-const data: Payment[] = [
-  {
-    id: "m5gr84i9",
-    amount: 316,
-    status: "success",
-    email: "ken99@example.com",
-  },
-  {
-    id: "3u1reuv4",
-    amount: 242,
-    status: "success",
-    email: "Abe45@example.com",
-  },
-  {
-    id: "derv1ws0",
-    amount: 837,
-    status: "processing",
-    email: "Monserrat44@example.com",
-  },
-  {
-    id: "5kma53ae",
-    amount: 874,
-    status: "success",
-    email: "Silas22@example.com",
-  },
-  {
-    id: "bhqecj4p",
-    amount: 721,
-    status: "failed",
-    email: "carmella@example.com",
-  },
-];
-
-export type Payment = {
-  id: string;
-  amount: number;
-  status: "pending" | "processing" | "success" | "failed";
-  email: string;
-};
-
-export const columns: ColumnDef<Payment>[] = [
+// Define columns for activities
+export const columns: ColumnDef<Activity>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -100,66 +62,98 @@ export const columns: ColumnDef<Payment>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("status")}</div>
-    ),
-  },
-  {
-    accessorKey: "email",
+    accessorKey: "title",
     header: ({ column }) => {
       return (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Email
+          Title
           <ArrowUpDown />
         </Button>
       );
     },
-    cell: ({ row }) => <div className="lowercase">{row.getValue("email")}</div>,
+    cell: ({ row }) => (
+      <div className="font-medium">{row.getValue("title")}</div>
+    ),
   },
   {
-    accessorKey: "amount",
-    header: () => <div className="text-right">Amount</div>,
-    cell: ({ row }) => {
-      const amount = parseFloat(row.getValue("amount"));
-
-      // Format the amount as a dollar amount
-      const formatted = new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-      }).format(amount);
-
-      return <div className="text-right font-medium">{formatted}</div>;
-    },
+    accessorKey: "description",
+    header: "Description",
+    cell: ({ row }) => (
+      <div className="max-w-md truncate">{row.getValue("description")}</div>
+    ),
+  },
+  {
+    accessorKey: "date",
+    header: "Date",
+    cell: ({ row }) => <div>{row.getValue("date")}</div>,
+  },
+  {
+    accessorKey: "time",
+    header: "Time",
+    cell: ({ row }) => <div>{row.getValue("time")}</div>,
+  },
+  {
+    accessorKey: "category",
+    header: "Category",
+    cell: ({ row }) => (
+      <div className="capitalize">{row.getValue("category")}</div>
+    ),
+  },
+  {
+    accessorKey: "completed",
+    header: "Status",
+    cell: ({ row }) => (
+      <div className="capitalize">
+        {row.getValue("completed") ? "✅ Completed" : "⏳ Pending"}
+      </div>
+    ),
   },
   {
     id: "actions",
     enableHiding: false,
-    cell: ({ row }) => {
-      const payment = row.original;
+    cell: ({ row, table }) => {
+      const activity = row.original;
+      // Get the onDelete function from table meta
+      const meta = table.options.meta as { onDelete?: (id: number) => void };
 
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
               <span className="sr-only">Open menu</span>
-              <MoreHorizontal />
+              <ChevronDown />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(payment.id)}
+              onClick={() => {
+                // Toggle completion status
+                fetch(
+                  `http://localhost:8080/api/activities/${activity.id}/complete`,
+                  {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ completed: !activity.completed }),
+                  }
+                )
+                  .then(() => window.location.reload())
+                  .catch((err) => console.error("Failed to update:", err));
+              }}
             >
-              Copy payment ID
+              {activity.completed ? "Mark as Pending" : "Mark as Completed"}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>
-            <DropdownMenuItem>View payment details</DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-red-600"
+              onClick={() => meta?.onDelete?.(activity.id)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
@@ -167,7 +161,13 @@ export const columns: ColumnDef<Payment>[] = [
   },
 ];
 
-export function DataTable() {
+interface DataTableProps {
+  onAddActivity?: () => void;
+}
+
+export function DataTable({ onAddActivity }: DataTableProps) {
+  const [data, setData] = React.useState<Activity[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -175,6 +175,48 @@ export function DataTable() {
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
+
+  // Fetch activities from Qt backend
+  const fetchActivities = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("http://localhost:8080/api/activities");
+      if (!response.ok) throw new Error("Failed to fetch");
+      const activities = await response.json();
+      setData(activities);
+    } catch (error) {
+      console.error("Error fetching activities:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Delete activity
+  const handleDelete = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this activity?")) return;
+
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/activities/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to delete");
+
+      // Refresh the list
+      await fetchActivities();
+    } catch (error) {
+      console.error("Error deleting activity:", error);
+      alert("Failed to delete activity");
+    }
+  };
+
+  // Load data on mount
+  React.useEffect(() => {
+    fetchActivities();
+  }, []);
 
   const table = useReactTable({
     data,
@@ -193,23 +235,36 @@ export function DataTable() {
       columnVisibility,
       rowSelection,
     },
+    meta: {
+      onDelete: handleDelete,
+    },
   });
+
+  if (loading) {
+    return <div className="text-center py-10">Loading activities...</div>;
+  }
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-4">
+      <div className="flex items-center py-4 gap-2">
         <Input
-          placeholder="Filter emails..."
-          value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
+          placeholder="Filter by title..."
+          value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
-            table.getColumn("email")?.setFilterValue(event.target.value)
+            table.getColumn("title")?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
         />
+
+        <Button onClick={onAddActivity} className="ml-auto">
+          <Plus className="mr-2 h-4 w-4" />
+          Add Activity
+        </Button>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto">
-              Columns <ChevronDown />
+            <Button variant="outline">
+              Columns <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -233,6 +288,7 @@ export function DataTable() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
       <div className="overflow-hidden rounded-md border">
         <Table>
           <TableHeader>
@@ -276,13 +332,14 @@ export function DataTable() {
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  No activities found.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="text-muted-foreground flex-1 text-sm">
           {table.getFilteredSelectedRowModel().rows.length} of{" "}

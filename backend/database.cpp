@@ -53,41 +53,24 @@ bool Database::createTables()
 {
     QSqlQuery query(m_db);
 
-    // Activities table
-    QString createActivities = R"(
-        CREATE TABLE IF NOT EXISTS activities (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+    // Events table (personal daily activities)
+    QString createEvents = R"(
+        CREATE TABLE IF NOT EXISTS events (
+            id TEXT PRIMARY KEY,
+            category TEXT NOT NULL,
+            start_date TEXT NOT NULL,
+            end_date TEXT NOT NULL,
             title TEXT NOT NULL,
-            description TEXT,
-            scheduled_time TEXT,
-            duration INTEGER DEFAULT 60,
-            priority INTEGER DEFAULT 0,
-            completed INTEGER DEFAULT 0,
-            created_at TEXT NOT NULL,
-            updated_at TEXT
+            color TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            reminder_time TEXT,
+            is_reminder_enabled INTEGER DEFAULT 0
         )
     )";
 
-    if (!query.exec(createActivities))
+    if (!query.exec(createEvents))
     {
-        qDebug() << "ERROR creating activities table:" << query.lastError().text();
-        return false;
-    }
-
-    // Alarms table
-    QString createAlarms = R"(
-        CREATE TABLE IF NOT EXISTS alarms (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            activity_id INTEGER NOT NULL,
-            alarm_time TEXT NOT NULL,
-            is_active INTEGER DEFAULT 1,
-            FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE CASCADE
-        )
-    )";
-
-    if (!query.exec(createAlarms))
-    {
-        qDebug() << "ERROR creating alarms table:" << query.lastError().text();
+        qDebug() << "ERROR creating events table:" << query.lastError().text();
         return false;
     }
 

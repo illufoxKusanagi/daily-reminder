@@ -6,11 +6,16 @@
     "dev": "./dev.sh dev",
     "build": "./dev.sh build",
     "run": "./dev.sh run",
-    "clean": "./dev.sh clean"
+    "clean": "./dev.sh clean",
+    "seed": "tsx scripts/seed-events.ts"
   },
   "workspaces": [
     "frontend"
   ],
-  "devDependencies": {},
-  "dependencies": {}
+  "dependencies": {
+    "framer-motion": "^12.23.24"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
 }

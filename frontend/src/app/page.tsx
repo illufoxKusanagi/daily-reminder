@@ -1,5 +1,6 @@
 import { DataTable } from "@/components/charts/table";
 import { ModeToggle } from "@/components/mode-toggle";
+import { Calendar } from "@/modules/calendar/calendar";
 
 export default function Home() {
   return (
@@ -12,7 +13,8 @@ export default function Home() {
         Your app to boost NNN (Nonstop Ngoding November), so you won&apos;t
         scroll fesnuk. Be productive and happy vibe coding!
       </p>
-      <DataTable />
+      {/* <DataTable /> */}
+      <Calendar />
     </div>
   );
 }

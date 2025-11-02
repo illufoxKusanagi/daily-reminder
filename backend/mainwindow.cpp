@@ -4,6 +4,8 @@
 #include "alarmmanager.h"
 #include "database.h"
 #include <QWebEngineView>
+#include <QWebEngineSettings>
+#include <QWebEngineProfile>
 #include <QUrl>
 #include <QFile>
 #include <QDebug>
@@ -49,6 +51,12 @@ void MainWindow::setupWebView()
 {
     m_webView = new QWebEngineView(this);
     setCentralWidget(m_webView);
+
+    // Enable developer tools and local access
+    QWebEngineSettings *settings = m_webView->settings();
+    settings->setAttribute(QWebEngineSettings::LocalContentCanAccessRemoteUrls, true);
+    settings->setAttribute(QWebEngineSettings::LocalContentCanAccessFileUrls, true);
+    settings->setAttribute(QWebEngineSettings::AllowRunningInsecureContent, true);
 
     // Load from Next.js dev server
     qDebug() << "Loading frontend from http://localhost:3000";

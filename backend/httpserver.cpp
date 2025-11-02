@@ -94,195 +94,90 @@ void HttpServer::setupRoutes()
 
     // ============ OPTIONS HANDLERS (CORS Preflight) ============
 
-    m_server->route("/api/activities", QHttpServerRequest::Method::Options,
+    m_server->route("/api/event", QHttpServerRequest::Method::Options,
                     [addCorsHeaders]()
                     {
-                        qDebug() << "📋 OPTIONS /api/activities";
+                        qDebug() << "📋 OPTIONS /api/event";
                         return addCorsHeaders(QHttpServerResponse(QHttpServerResponse::StatusCode::Ok));
                     });
 
-    m_server->route("/api/activities/<arg>", QHttpServerRequest::Method::Options,
-                    [addCorsHeaders](int)
+    m_server->route("/api/event/<arg>", QHttpServerRequest::Method::Options,
+                    [addCorsHeaders](const QString &)
                     {
-                        qDebug() << "📋 OPTIONS /api/activities/:id";
+                        qDebug() << "📋 OPTIONS /api/event/:id";
                         return addCorsHeaders(QHttpServerResponse(QHttpServerResponse::StatusCode::Ok));
                     });
 
-    m_server->route("/api/activities/upcoming", QHttpServerRequest::Method::Options,
-                    [addCorsHeaders]()
-                    {
-                        qDebug() << "📋 OPTIONS /api/activities/upcoming";
-                        return addCorsHeaders(QHttpServerResponse(QHttpServerResponse::StatusCode::Ok));
-                    });
+    // ============ EVENT ROUTES (Calendar API) ============
 
-    m_server->route("/api/activities/<arg>/complete", QHttpServerRequest::Method::Options,
-                    [addCorsHeaders](int)
-                    {
-                        qDebug() << "📋 OPTIONS /api/activities/:id/complete";
-                        return addCorsHeaders(QHttpServerResponse(QHttpServerResponse::StatusCode::Ok));
-                    });
-
-    m_server->route("/api/alarms", QHttpServerRequest::Method::Options,
-                    [addCorsHeaders]()
-                    {
-                        qDebug() << "📋 OPTIONS /api/alarms";
-                        return addCorsHeaders(QHttpServerResponse(QHttpServerResponse::StatusCode::Ok));
-                    });
-
-    m_server->route("/api/alarms/<arg>", QHttpServerRequest::Method::Options,
-                    [addCorsHeaders](int)
-                    {
-                        qDebug() << "📋 OPTIONS /api/alarms/:id";
-                        return addCorsHeaders(QHttpServerResponse(QHttpServerResponse::StatusCode::Ok));
-                    });
-
-    m_server->route("/api/alarms/activity/<arg>", QHttpServerRequest::Method::Options,
-                    [addCorsHeaders](int)
-                    {
-                        qDebug() << "📋 OPTIONS /api/alarms/activity/:id";
-                        return addCorsHeaders(QHttpServerResponse(QHttpServerResponse::StatusCode::Ok));
-                    });
-
-    // ============ ACTIVITY ROUTES ============
-
-    // GET /api/activities - List all activities
-    m_server->route("/api/activities", QHttpServerRequest::Method::Get,
+    // GET /api/event - List all events
+    m_server->route("/api/event", QHttpServerRequest::Method::Get,
                     [this, addCorsHeaders]()
                     {
-                        qDebug() << "🔍 GET /api/activities";
-                        QJsonArray activities = m_activityManager->getAllActivities();
-                        return addCorsHeaders(jsonResponse(activities));
+                        qDebug() << "🔍 GET /api/event";
+                        QJsonArray events = m_activityManager->getAllActivities();
+                        return addCorsHeaders(jsonResponse(events));
                     });
 
-    // POST /api/activities - Create new activity
-    m_server->route("/api/activities", QHttpServerRequest::Method::Post,
+    // POST /api/event - Create new event
+    m_server->route("/api/event", QHttpServerRequest::Method::Post,
                     [this, addCorsHeaders](const QHttpServerRequest &request)
                     {
-                        qDebug() << "📝 POST /api/activities";
+                        qDebug() << "📝 POST /api/event";
                         qDebug() << "📦 Request body:" << request.body();
                         QJsonObject data = parseRequestBody(request);
                         qDebug() << "🔧 Parsed JSON:" << data;
 
-                        QJsonObject activity = m_activityManager->createActivity(data);
-                        if (activity.contains("error"))
+                        QJsonObject event = m_activityManager->createActivity(data);
+                        if (event.contains("error"))
                         {
-                            return addCorsHeaders(errorResponse(activity["error"].toString()));
+                            return addCorsHeaders(errorResponse(event["error"].toString()));
                         }
 
-                        return addCorsHeaders(jsonResponse(activity, QHttpServerResponse::StatusCode::Created));
+                        return addCorsHeaders(jsonResponse(event, QHttpServerResponse::StatusCode::Created));
                     });
 
-    // GET /api/activities/upcoming - Get upcoming activities (BEFORE :id route!)
-    m_server->route("/api/activities/upcoming", QHttpServerRequest::Method::Get,
-                    [this, addCorsHeaders]()
+    // GET /api/event/:id - Get single event
+    m_server->route("/api/event/<arg>", QHttpServerRequest::Method::Get,
+                    [this, addCorsHeaders](const QString &id)
                     {
-                        qDebug() << "📅 GET /api/activities/upcoming";
-                        QJsonArray activities = m_activityManager->getUpcomingActivities();
-                        return addCorsHeaders(jsonResponse(activities));
-                    });
-
-    // GET /api/activities/:id - Get single activity
-    m_server->route("/api/activities/<arg>", QHttpServerRequest::Method::Get,
-                    [this, addCorsHeaders](int id)
-                    {
-                        qDebug() << "🔍 GET /api/activities/" << id;
-                        QJsonObject activity = m_activityManager->getActivityById(id);
-                        if (activity.contains("error"))
+                        qDebug() << "🔍 GET /api/event/" << id;
+                        QJsonObject event = m_activityManager->getActivityById(id);
+                        if (event.contains("error"))
                         {
-                            return addCorsHeaders(errorResponse(activity["error"].toString(), QHttpServerResponse::StatusCode::NotFound));
+                            return addCorsHeaders(errorResponse(event["error"].toString(), QHttpServerResponse::StatusCode::NotFound));
                         }
-                        return addCorsHeaders(jsonResponse(activity));
+                        return addCorsHeaders(jsonResponse(event));
                     });
 
-    // PUT /api/activities/:id - Update activity
-    m_server->route("/api/activities/<arg>", QHttpServerRequest::Method::Put,
-                    [this, addCorsHeaders](int id, const QHttpServerRequest &request)
+    // PUT /api/event/:id - Update event
+    m_server->route("/api/event/<arg>", QHttpServerRequest::Method::Put,
+                    [this, addCorsHeaders](const QString &id, const QHttpServerRequest &request)
                     {
-                        qDebug() << "✏️ PUT /api/activities/" << id;
+                        qDebug() << "✏️ PUT /api/event/" << id;
                         QJsonObject data = parseRequestBody(request);
 
-                        QJsonObject activity = m_activityManager->updateActivity(id, data);
-                        if (activity.contains("error"))
+                        QJsonObject event = m_activityManager->updateActivity(id, data);
+                        if (event.contains("error"))
                         {
-                            return addCorsHeaders(errorResponse(activity["error"].toString()));
+                            return addCorsHeaders(errorResponse(event["error"].toString()));
                         }
 
-                        return addCorsHeaders(jsonResponse(activity));
+                        return addCorsHeaders(jsonResponse(event));
                     });
 
-    // DELETE /api/activities/:id - Delete activity
-    m_server->route("/api/activities/<arg>", QHttpServerRequest::Method::Delete,
-                    [this, addCorsHeaders](int id)
+    // DELETE /api/event/:id - Delete event
+    m_server->route("/api/event/<arg>", QHttpServerRequest::Method::Delete,
+                    [this, addCorsHeaders](const QString &id)
                     {
-                        qDebug() << "🗑️ DELETE /api/activities/" << id;
+                        qDebug() << "🗑️ DELETE /api/event/" << id;
                         bool success = m_activityManager->deleteActivity(id);
                         if (!success)
                         {
-                            return addCorsHeaders(errorResponse("Failed to delete activity"));
+                            return addCorsHeaders(errorResponse("Failed to delete event"));
                         }
 
-                        return addCorsHeaders(jsonResponse(QJsonObject{{"message", "Activity deleted successfully"}}));
-                    });
-
-    // PATCH /api/activities/:id/complete - Mark as completed
-    m_server->route("/api/activities/<arg>/complete", QHttpServerRequest::Method::Patch,
-                    [this, addCorsHeaders](int id, const QHttpServerRequest &request)
-                    {
-                        qDebug() << "✅ PATCH /api/activities/" << id << "/complete";
-                        QJsonObject data = parseRequestBody(request);
-                        bool completed = data["completed"].toBool();
-
-                        bool success = m_activityManager->markAsCompleted(id, completed);
-                        if (!success)
-                        {
-                            return addCorsHeaders(errorResponse("Failed to update activity"));
-                        }
-
-                        return addCorsHeaders(jsonResponse(QJsonObject{{"message", "Activity updated successfully"}}));
-                    });
-
-    // ============ ALARM ROUTES ============
-
-    // POST /api/alarms - Create alarm
-    m_server->route("/api/alarms", QHttpServerRequest::Method::Post,
-                    [this, addCorsHeaders](const QHttpServerRequest &request)
-                    {
-                        qDebug() << "⏰ POST /api/alarms";
-                        QJsonObject data = parseRequestBody(request);
-
-                        int activityId = data["activityId"].toInt();
-                        QString alarmTime = data["alarmTime"].toString();
-
-                        QJsonObject alarm = m_alarmManager->createAlarm(activityId, alarmTime);
-                        if (alarm.contains("error"))
-                        {
-                            return addCorsHeaders(errorResponse(alarm["error"].toString()));
-                        }
-
-                        return addCorsHeaders(jsonResponse(alarm, QHttpServerResponse::StatusCode::Created));
-                    });
-
-    // GET /api/alarms/activity/:id - Get alarms for activity
-    m_server->route("/api/alarms/activity/<arg>", QHttpServerRequest::Method::Get,
-                    [this, addCorsHeaders](int activityId)
-                    {
-                        qDebug() << "🔍 GET /api/alarms/activity/" << activityId;
-                        QJsonArray alarms = m_alarmManager->getAlarmsForActivity(activityId);
-                        return addCorsHeaders(jsonResponse(alarms));
-                    });
-
-    // DELETE /api/alarms/:id - Delete alarm
-    m_server->route("/api/alarms/<arg>", QHttpServerRequest::Method::Delete,
-                    [this, addCorsHeaders](int id)
-                    {
-                        qDebug() << "🗑️ DELETE /api/alarms/" << id;
-                        bool success = m_alarmManager->deleteAlarm(id);
-                        if (!success)
-                        {
-                            return addCorsHeaders(errorResponse("Failed to delete alarm"));
-                        }
-
-                        return addCorsHeaders(jsonResponse(QJsonObject{{"message", "Alarm deleted successfully"}}));
+                        return addCorsHeaders(jsonResponse(QJsonObject{{"message", "Event deleted successfully"}}));
                     });
 
     // Simple status endpoint

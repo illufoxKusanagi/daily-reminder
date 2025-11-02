@@ -16,19 +16,19 @@ public:
     // CRUD Operations
     QJsonObject createActivity(const QJsonObject &data);
     QJsonArray getAllActivities();
-    QJsonObject getActivityById(int id);
-    QJsonObject updateActivity(int id, const QJsonObject &data);
-    bool deleteActivity(int id);
+    QJsonObject getActivityById(const QString &id);
+    QJsonObject updateActivity(const QString &id, const QJsonObject &data);
+    bool deleteActivity(const QString &id);
 
     // Additional queries
     QJsonArray getActivitiesByDate(const QString &date);
     QJsonArray getUpcomingActivities();
-    bool markAsCompleted(int id, bool completed);
+    bool markAsCompleted(const QString &id, bool completed);
 
 signals:
-    void activityCreated(int id);
-    void activityUpdated(int id);
-    void activityDeleted(int id);
+    void activityCreated(const QString &id);
+    void activityUpdated(const QString &id);
+    void activityDeleted(const QString &id);
 
 private:
     QString currentDateTime() const;

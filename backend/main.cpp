@@ -53,16 +53,11 @@ int main(int argc, char *argv[])
             qInfo() << "✅ Backend Server started on port" << server.getPort();
             qInfo() << "📋 Available endpoints:";
             qInfo() << "   GET    /status";
-            qInfo() << "   GET    /api/activities";
-            qInfo() << "   POST   /api/activities";
-            qInfo() << "   GET    /api/activities/:id";
-            qInfo() << "   PUT    /api/activities/:id";
-            qInfo() << "   DELETE /api/activities/:id";
-            qInfo() << "   GET    /api/activities/upcoming";
-            qInfo() << "   PATCH  /api/activities/:id/complete";
-            qInfo() << "   POST   /api/alarms";
-            qInfo() << "   GET    /api/alarms/activity/:id";
-            qInfo() << "   DELETE /api/alarms/:id";
+            qInfo() << "   GET    /api/event";
+            qInfo() << "   POST   /api/event";
+            qInfo() << "   GET    /api/event/:id";
+            qInfo() << "   PUT    /api/event/:id";
+            qInfo() << "   DELETE /api/event/:id";
             qInfo() << "";
             qInfo() << "💡 Usage:";
             qInfo() << "   --headless        Run backend only (no GUI)";
@@ -78,6 +73,10 @@ int main(int argc, char *argv[])
     else
     {
         // GUI mode: Qt Application with WebEngine
+
+        // Disable web security to allow CORS requests from localhost:3000 to localhost:8080
+        qputenv("QTWEBENGINE_CHROMIUM_FLAGS", "--disable-web-security --allow-running-insecure-content");
+
         QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
         QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
         QApplication app(argc, argv);

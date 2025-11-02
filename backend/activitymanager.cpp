@@ -3,6 +3,7 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QDateTime>
+#include <QUuid>
 #include <QDebug>
 
 ActivityManager::ActivityManager(QObject *parent)
@@ -14,25 +15,41 @@ QJsonObject ActivityManager::createActivity(const QJsonObject &data)
 {
     QSqlQuery query(Database::instance().db());
 
+    // Generate UUID for event id
+    QString id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+
     query.prepare(R"(
-        INSERT INTO activities (title, description, scheduled_time, duration, priority, created_at)
-        VALUES (:title, :description, :scheduled_time, :duration, :priority, :created_at)
+        INSERT INTO events (id, category, start_date, end_date, title, color, description, reminder_time, is_reminder_enabled)
+        VALUES (:id, :category, :start_date, :end_date, :title, :color, :description, :reminder_time, :is_reminder_enabled)
     )");
 
+    query.bindValue(":id", id);
+    query.bindValue(":category", data["category"].toString());
+    query.bindValue(":start_date", data["startDate"].toString());
+    query.bindValue(":end_date", data["endDate"].toString());
     query.bindValue(":title", data["title"].toString());
-    query.bindValue(":description", data["description"].toString());
-    query.bindValue(":scheduled_time", data["scheduledTime"].toString());
-    query.bindValue(":duration", data["duration"].toInt(60));
-    query.bindValue(":priority", data["priority"].toInt(0));
-    query.bindValue(":created_at", currentDateTime());
+    query.bindValue(":color", data["color"].toString());
+    query.bindValue(":description", data["description"].toString(""));
+
+    // Handle optional reminder time (can be NULL)
+    if (data.contains("reminderTime") && !data["reminderTime"].toString().isEmpty())
+    {
+        query.bindValue(":reminder_time", data["reminderTime"].toString());
+    }
+    else
+    {
+        query.bindValue(":reminder_time", QVariant(QVariant::String));
+    }
+
+    query.bindValue(":is_reminder_enabled", data["isReminderEnabled"].toBool(false) ? 1 : 0);
 
     if (!query.exec())
     {
-        qDebug() << "ERROR creating activity:" << query.lastError().text();
-        return QJsonObject{{"error", "Failed to create activity"}};
+        qDebug() << "ERROR creating event:" << query.lastError().text();
+        qDebug() << "Data received:" << data;
+        return QJsonObject{{"error", "Failed to create event"}};
     }
 
-    int id = query.lastInsertId().toInt();
     emit activityCreated(id);
 
     return getActivityById(id);
@@ -42,78 +59,92 @@ QJsonArray ActivityManager::getAllActivities()
 {
     QSqlQuery query(Database::instance().db());
 
-    if (!query.exec("SELECT * FROM activities ORDER BY scheduled_time DESC"))
+    if (!query.exec("SELECT * FROM events ORDER BY start_date ASC"))
     {
-        qDebug() << "ERROR fetching activities:" << query.lastError().text();
+        qDebug() << "ERROR fetching events:" << query.lastError().text();
         return QJsonArray();
     }
 
-    QJsonArray activities;
+    QJsonArray events;
     while (query.next())
     {
-        activities.append(activityFromQuery(query));
+        events.append(activityFromQuery(query));
     }
 
-    return activities;
+    return events;
 }
 
-QJsonObject ActivityManager::getActivityById(int id)
+QJsonObject ActivityManager::getActivityById(const QString &id)
 {
     QSqlQuery query(Database::instance().db());
-    query.prepare("SELECT * FROM activities WHERE id = :id");
+    query.prepare("SELECT * FROM events WHERE id = :id");
     query.bindValue(":id", id);
 
     if (!query.exec() || !query.next())
     {
-        qDebug() << "ERROR fetching activity:" << query.lastError().text();
-        return QJsonObject{{"error", "Activity not found"}};
+        qDebug() << "ERROR fetching event:" << query.lastError().text();
+        return QJsonObject{{"error", "Event not found"}};
     }
 
     return activityFromQuery(query);
 }
 
-QJsonObject ActivityManager::updateActivity(int id, const QJsonObject &data)
+QJsonObject ActivityManager::updateActivity(const QString &id, const QJsonObject &data)
 {
     QSqlQuery query(Database::instance().db());
 
     query.prepare(R"(
-        UPDATE activities SET
+        UPDATE events SET
+            category = :category,
+            start_date = :start_date,
+            end_date = :end_date,
             title = :title,
+            color = :color,
             description = :description,
-            scheduled_time = :scheduled_time,
-            duration = :duration,
-            priority = :priority,
-            updated_at = :updated_at
+            reminder_time = :reminder_time,
+            is_reminder_enabled = :is_reminder_enabled
         WHERE id = :id
     )");
 
     query.bindValue(":id", id);
+    query.bindValue(":category", data["category"].toString());
+    query.bindValue(":start_date", data["startDate"].toString());
+    query.bindValue(":end_date", data["endDate"].toString());
     query.bindValue(":title", data["title"].toString());
-    query.bindValue(":description", data["description"].toString());
-    query.bindValue(":scheduled_time", data["scheduledTime"].toString());
-    query.bindValue(":duration", data["duration"].toInt());
-    query.bindValue(":priority", data["priority"].toInt());
-    query.bindValue(":updated_at", currentDateTime());
+    query.bindValue(":color", data["color"].toString());
+    query.bindValue(":description", data["description"].toString(""));
+
+    // Handle optional reminder time (can be NULL)
+    if (data.contains("reminderTime") && !data["reminderTime"].toString().isEmpty())
+    {
+        query.bindValue(":reminder_time", data["reminderTime"].toString());
+    }
+    else
+    {
+        query.bindValue(":reminder_time", QVariant(QVariant::String));
+    }
+
+    query.bindValue(":is_reminder_enabled", data["isReminderEnabled"].toBool(false) ? 1 : 0);
 
     if (!query.exec())
     {
-        qDebug() << "ERROR updating activity:" << query.lastError().text();
-        return QJsonObject{{"error", "Failed to update activity"}};
+        qDebug() << "ERROR updating event:" << query.lastError().text();
+        return QJsonObject{{"error", "Failed to update event"}};
     }
 
     emit activityUpdated(id);
     return getActivityById(id);
 }
 
-bool ActivityManager::deleteActivity(int id)
+bool ActivityManager::deleteActivity(const QString &id)
 {
     QSqlQuery query(Database::instance().db());
-    query.prepare("DELETE FROM activities WHERE id = :id");
+    query.prepare("DELETE FROM events WHERE id = :id");
     query.bindValue(":id", id);
 
     if (!query.exec())
     {
-        qDebug() << "ERROR deleting activity:" << query.lastError().text();
+        qDebug() << "ERROR deleting event:" << query.lastError().text();
         return false;
     }
 
@@ -124,64 +155,59 @@ bool ActivityManager::deleteActivity(int id)
 QJsonArray ActivityManager::getActivitiesByDate(const QString &date)
 {
     QSqlQuery query(Database::instance().db());
-    query.prepare("SELECT * FROM activities WHERE DATE(scheduled_time) = :date");
+    query.prepare(R"(
+        SELECT * FROM events 
+        WHERE DATE(start_date) <= :date AND DATE(end_date) >= :date
+        ORDER BY start_date ASC
+    )");
     query.bindValue(":date", date);
 
     if (!query.exec())
     {
-        qDebug() << "ERROR fetching activities by date:" << query.lastError().text();
+        qDebug() << "ERROR fetching events by date:" << query.lastError().text();
         return QJsonArray();
     }
 
-    QJsonArray activities;
+    QJsonArray events;
     while (query.next())
     {
-        activities.append(activityFromQuery(query));
+        events.append(activityFromQuery(query));
     }
 
-    return activities;
+    return events;
 }
 
 QJsonArray ActivityManager::getUpcomingActivities()
 {
     QSqlQuery query(Database::instance().db());
     query.prepare(R"(
-        SELECT * FROM activities 
-        WHERE scheduled_time >= :now AND completed = 0
-        ORDER BY scheduled_time ASC
+        SELECT * FROM events 
+        WHERE start_date >= :now
+        ORDER BY start_date ASC
         LIMIT 10
     )");
     query.bindValue(":now", currentDateTime());
 
     if (!query.exec())
     {
-        qDebug() << "ERROR fetching upcoming activities:" << query.lastError().text();
+        qDebug() << "ERROR fetching upcoming events:" << query.lastError().text();
         return QJsonArray();
     }
 
-    QJsonArray activities;
+    QJsonArray events;
     while (query.next())
     {
-        activities.append(activityFromQuery(query));
+        events.append(activityFromQuery(query));
     }
 
-    return activities;
+    return events;
 }
 
-bool ActivityManager::markAsCompleted(int id, bool completed)
+bool ActivityManager::markAsCompleted(const QString &id, bool completed)
 {
-    QSqlQuery query(Database::instance().db());
-    query.prepare("UPDATE activities SET completed = :completed WHERE id = :id");
-    query.bindValue(":completed", completed ? 1 : 0);
-    query.bindValue(":id", id);
-
-    if (!query.exec())
-    {
-        qDebug() << "ERROR marking activity:" << query.lastError().text();
-        return false;
-    }
-
-    emit activityUpdated(id);
+    // This method is deprecated for calendar events
+    // Keeping for backward compatibility but does nothing
+    qDebug() << "markAsCompleted called but not implemented for events";
     return true;
 }
 
@@ -193,14 +219,14 @@ QString ActivityManager::currentDateTime() const
 QJsonObject ActivityManager::activityFromQuery(QSqlQuery &query)
 {
     QJsonObject obj;
-    obj["id"] = query.value("id").toInt();
+    obj["id"] = query.value("id").toString();
+    obj["category"] = query.value("category").toString();
+    obj["startDate"] = query.value("start_date").toString();
+    obj["endDate"] = query.value("end_date").toString();
     obj["title"] = query.value("title").toString();
+    obj["color"] = query.value("color").toString();
     obj["description"] = query.value("description").toString();
-    obj["scheduledTime"] = query.value("scheduled_time").toString();
-    obj["duration"] = query.value("duration").toInt();
-    obj["priority"] = query.value("priority").toInt();
-    obj["completed"] = query.value("completed").toBool();
-    obj["createdAt"] = query.value("created_at").toString();
-    obj["updatedAt"] = query.value("updated_at").toString();
+    obj["reminderTime"] = query.value("reminder_time").toString();
+    obj["isReminderEnabled"] = query.value("is_reminder_enabled").toBool();
     return obj;
 }
