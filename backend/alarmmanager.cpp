@@ -4,129 +4,96 @@
 #include <QSqlError>
 #include <QDateTime>
 #include <QDebug>
+#include <QApplication>
+
+#if defined(Q_OS_WIN)
+#include <QSystemTrayIcon>
+#elif defined(Q_OS_LINUX)
+#include <QProcess>
+#elif defined(Q_OS_MACOS)
+#include <QProcess>
+#endif
 
 AlarmManager::AlarmManager(QObject *parent)
     : QObject(parent)
 {
-    // Check alarms every minute
+    // Check alarms every 30 seconds for better responsiveness
     m_checkTimer = new QTimer(this);
     connect(m_checkTimer, &QTimer::timeout, this, &AlarmManager::onTimerTimeout);
-    m_checkTimer->start(60000); // 60 seconds
+    m_checkTimer->start(30000); // 30 seconds
 
     loadActiveAlarms();
+
+    qInfo() << "⏰ AlarmManager started - checking every 30 seconds";
 }
 
-QJsonObject AlarmManager::createAlarm(int activityId, const QString &alarmTime)
+void AlarmManager::reloadAlarms()
 {
-    QSqlQuery query(Database::instance().db());
-
-    query.prepare(R"(
-        INSERT INTO alarms (activity_id, alarm_time, is_active)
-        VALUES (:activity_id, :alarm_time, 1)
-    )");
-
-    query.bindValue(":activity_id", activityId);
-    query.bindValue(":alarm_time", alarmTime);
-
-    if (!query.exec())
-    {
-        qDebug() << "ERROR creating alarm:" << query.lastError().text();
-        return QJsonObject{{"error", "Failed to create alarm"}};
-    }
-
-    int id = query.lastInsertId().toInt();
-
-    // Add to active alarms
-    QDateTime triggerTime = QDateTime::fromString(alarmTime, Qt::ISODate);
-    m_activeAlarms[id] = triggerTime;
-
-    QJsonObject result;
-    result["id"] = id;
-    result["activityId"] = activityId;
-    result["alarmTime"] = alarmTime;
-    result["isActive"] = true;
-
-    return result;
-}
-
-QJsonArray AlarmManager::getAlarmsForActivity(int activityId)
-{
-    QSqlQuery query(Database::instance().db());
-    query.prepare("SELECT * FROM alarms WHERE activity_id = :activity_id AND is_active = 1");
-    query.bindValue(":activity_id", activityId);
-
-    if (!query.exec())
-    {
-        qDebug() << "ERROR fetching alarms:" << query.lastError().text();
-        return QJsonArray();
-    }
-
-    QJsonArray alarms;
-    while (query.next())
-    {
-        QJsonObject obj;
-        obj["id"] = query.value("id").toInt();
-        obj["activityId"] = query.value("activity_id").toInt();
-        obj["alarmTime"] = query.value("alarm_time").toString();
-        obj["isActive"] = query.value("is_active").toBool();
-        alarms.append(obj);
-    }
-
-    return alarms;
-}
-
-bool AlarmManager::deleteAlarm(int alarmId)
-{
-    QSqlQuery query(Database::instance().db());
-    query.prepare("UPDATE alarms SET is_active = 0 WHERE id = :id");
-    query.bindValue(":id", alarmId);
-
-    if (!query.exec())
-    {
-        qDebug() << "ERROR deleting alarm:" << query.lastError().text();
-        return false;
-    }
-
-    m_activeAlarms.remove(alarmId);
-    return true;
+    loadActiveAlarms();
 }
 
 void AlarmManager::checkAlarms()
 {
     QDateTime now = QDateTime::currentDateTime();
 
-    QList<int> triggeredAlarms;
-    for (auto it = m_activeAlarms.begin(); it != m_activeAlarms.end(); ++it)
-    {
-        if (it.value() <= now)
-        {
-            triggeredAlarms.append(it.key());
-        }
+    // Debug: Show that we're checking
+    static int checkCount = 0;
+    checkCount++;
+    if (checkCount % 10 == 1)
+    { // Log every 10th check to avoid spam
+        qInfo() << "⏰ Checking alarms... (check #" << checkCount << ")";
     }
 
-    // Trigger alarms
-    for (int alarmId : triggeredAlarms)
+    QSqlQuery query(Database::instance().db());
+    query.prepare(R"(
+        SELECT id, title, category, reminder_time, start_date
+        FROM events
+        WHERE is_reminder_enabled = 1
+        AND reminder_time IS NOT NULL
+        AND datetime(reminder_time) <= datetime('now', 'localtime')
+    )");
+
+    if (!query.exec())
     {
-        QSqlQuery query(Database::instance().db());
-        query.prepare(R"(
-            SELECT a.id, a.title, al.activity_id
-            FROM alarms al
-            JOIN activities a ON al.activity_id = a.id
-            WHERE al.id = :alarm_id
-        )");
-        query.bindValue(":alarm_id", alarmId);
+        qWarning() << "❌ Failed to check alarms:" << query.lastError().text();
+        return;
+    }
 
-        if (query.exec() && query.next())
+    int triggeredCount = 0;
+    while (query.next())
+    {
+        QString eventId = query.value("id").toString(); // Fixed: ID is TEXT, not INTEGER
+        QString title = query.value("title").toString();
+        QString category = query.value("category").toString();
+        QString reminderTime = query.value("reminder_time").toString();
+        QString startDate = query.value("start_date").toString();
+
+        qInfo() << "🔔 ALARM TRIGGERED!" << "Event:" << title << "Category:" << category << "ID:" << eventId;
+
+        showNotification(eventId, title, category, startDate);
+        emit alarmTriggered(eventId, title); // Now using QString for eventId
+
+        // Disable the reminder so it doesn't trigger again
+        QSqlQuery updateQuery(Database::instance().db());
+        updateQuery.prepare("UPDATE events SET is_reminder_enabled = 0 WHERE id = :id");
+        updateQuery.bindValue(":id", eventId); // Use QString, not int
+        if (!updateQuery.exec())
         {
-            int activityId = query.value("activity_id").toInt();
-            QString title = query.value("title").toString();
-
-            showNotification(activityId, title);
-            emit alarmTriggered(activityId, title);
+            qWarning() << "❌ Failed to disable reminder for event" << eventId << ":" << updateQuery.lastError().text();
+        }
+        else
+        {
+            qInfo() << "✅ Disabled reminder for event" << eventId;
         }
 
-        // Deactivate alarm
-        deleteAlarm(alarmId);
+        triggeredCount++;
+    }
+
+    if (triggeredCount > 0)
+    {
+        qInfo() << "✅ Triggered" << triggeredCount << "alarm(s)";
+        // Reload active alarms after triggering to update the count
+        loadActiveAlarms();
     }
 }
 
@@ -137,26 +104,81 @@ void AlarmManager::onTimerTimeout()
 
 void AlarmManager::loadActiveAlarms()
 {
+    // Query events table for upcoming reminders using SQLite datetime functions
     QSqlQuery query(Database::instance().db());
-    query.exec("SELECT id, alarm_time FROM alarms WHERE is_active = 1");
+    query.prepare(R"(
+        SELECT id, title, reminder_time
+        FROM events
+        WHERE is_reminder_enabled = 1
+        AND reminder_time IS NOT NULL
+        AND datetime(reminder_time) > datetime('now')
+    )");
+
+    if (!query.exec())
+    {
+        qWarning() << "❌ Failed to load active alarms:" << query.lastError().text();
+        return;
+    }
+
+    m_activeAlarms.clear();
+    int count = 0;
 
     while (query.next())
     {
-        int id = query.value("id").toInt();
-        QString timeStr = query.value("alarm_time").toString();
+        QString id = query.value("id").toString(); // Fixed: ID is TEXT
+        QString title = query.value("title").toString();
+        QString timeStr = query.value("reminder_time").toString();
         QDateTime triggerTime = QDateTime::fromString(timeStr, Qt::ISODate);
 
-        if (triggerTime > QDateTime::currentDateTime())
+        if (triggerTime.isValid())
         {
-            m_activeAlarms[id] = triggerTime;
+            m_activeAlarms[id] = triggerTime; // Map now uses QString keys
+            count++;
         }
     }
 
-    qDebug() << "Loaded" << m_activeAlarms.size() << "active alarms";
+    qInfo() << "📋 Loaded" << count << "active alarm(s)";
 }
 
-void AlarmManager::showNotification(int activityId, const QString &title)
+void AlarmManager::showNotification(const QString &eventId, const QString &title, const QString &category, const QString &startTime)
 {
-    qDebug() << "ALARM TRIGGERED! Activity" << activityId << ":" << title;
-    // TODO: Show system notification (QSystemTrayIcon, native notifications, etc.)
+    QString message = QString("Event: %1\nCategory: %2\nTime: %3").arg(title, category, startTime);
+
+    qInfo() << "🔔 ================================";
+    qInfo() << "🔔 ALARM NOTIFICATION";
+    qInfo() << "🔔 Event ID:" << eventId;
+    qInfo() << "🔔 Title:" << title;
+    qInfo() << "🔔 Category:" << category;
+    qInfo() << "🔔 Start Time:" << startTime;
+    qInfo() << "🔔 ================================";
+
+#if defined(Q_OS_LINUX)
+    // Use notify-send on Linux
+    QProcess::startDetached("notify-send",
+                            QStringList() << "-u" << "critical"
+                                          << "-i" << "appointment-soon"
+                                          << QString("Daily Reminder: %1").arg(title)
+                                          << message);
+
+#elif defined(Q_OS_MACOS)
+    // Use osascript for macOS notifications
+    QString script = QString("display notification \"%1\" with title \"Daily Reminder: %2\" sound name \"default\"")
+                         .arg(message.replace("\"", "\\\""), title.replace("\"", "\\\""));
+    QProcess::startDetached("osascript", QStringList() << "-e" << script);
+
+#elif defined(Q_OS_WIN)
+    // Windows: Could use QSystemTrayIcon or Windows Toast notifications
+    // For now, just log (you can add Windows-specific notification later)
+    qInfo() << "💡 To enable Windows notifications, integrate QSystemTrayIcon or Windows Toast API";
+
+#else
+    qInfo() << "⚠️ Platform-specific notifications not configured for this OS";
+#endif
+
+    // Also try to show application notification if running with GUI
+    if (QApplication::instance())
+    {
+        // Could show QMessageBox or custom dialog here if needed
+        qInfo() << "📱 GUI is available - could show in-app notification";
+    }
 }

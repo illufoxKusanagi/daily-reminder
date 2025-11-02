@@ -2,6 +2,8 @@
 
 A desktop calendar application for managing daily activities with reminders, built with Qt 6 (backend REST API) and Next.js (frontend UI).
 
+> ⚠️ **Platform Support**: This application has been tested and verified to work on **Linux** only. Windows and macOS support is experimental and some features (especially desktop notifications) may not work properly.
+
 ## 🏗️ Architecture Overview
 
 ```
@@ -17,18 +19,18 @@ A desktop calendar application for managing daily activities with reminders, bui
 │  │  │   • Date/time pickers                               │  │  │
 │  │  └─────────────────────────────────────────────────────┘  │  │
 │  └───────────────────────────────────────────────────────────┘  │
-│                            │                                     │
-│              HTTP REST API │ (localhost:8080)                    │
-│                            ↓                                     │
+│                            │                                    │
+│              HTTP REST API │ (localhost:8080)                   │
+│                            ↓                                    │
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │              QHttpServer (REST API)                       │  │
-│  │   GET    /api/event          - List all events           │  │
-│  │   POST   /api/event          - Create new event          │  │
-│  │   PUT    /api/event/:id      - Update event              │  │
-│  │   DELETE /api/event/:id      - Delete event              │  │
+│  │   GET    /api/event          - List all events            │  │
+│  │   POST   /api/event          - Create new event           │  │
+│  │   PUT    /api/event/:id      - Update event               │  │
+│  │   DELETE /api/event/:id      - Delete event               │  │
 │  └───────────────────────────────────────────────────────────┘  │
-│                            │                                     │
-│                            ↓                                     │
+│                            │                                    │
+│                            ↓                                    │
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │                SQLite Database                            │  │
 │  │   events table:                                           │  │
@@ -45,6 +47,7 @@ A desktop calendar application for managing daily activities with reminders, bui
 - ✅ **Event Management**: Create, edit, delete events with categories
 - ✅ **Categories**: Work, Personal, Health, Shopping, Exercise, Study, Social, Home, Other
 - ✅ **Reminders**: Set reminder times with enable/disable toggle
+- ✅ **Alarm/Reminder System**: Qt-based timer that checks every 30 seconds and triggers system notifications
 - ✅ **Date/Time Pickers**: Intuitive datetime selection
 - ✅ **Persistent Storage**: SQLite database for data persistence
 - ✅ **REST API**: Clean HTTP API for all operations
@@ -198,26 +201,29 @@ All API endpoints are served by the Qt backend on `http://localhost:8080`.
 - CMake 3.16+
 - C++17 compiler (GCC, Clang, or MSVC)
 - SQLite (included with Qt)
+- **Linux**: `notify-send` (libnotify) for desktop notifications
 
 ## 🚀 Quick Start
 
-### 1. Install Qt 6
 ### 1. Install Qt 6
 
 **Linux (Ubuntu/Debian):**
 ```bash
 sudo apt-get update
-sudo apt-get install qt6-base-dev qt6-webengine-dev qt6-httpserver-dev
+sudo apt-get install qt6-base-dev qt6-webengine-dev qt6-httpserver-dev libnotify-bin
 ```
 
 **macOS:**
 ```bash
 brew install qt@6
 ```
+⚠️ Note: Desktop notifications may not work on macOS.
 
 **Windows:**
 - Download Qt from https://www.qt.io/download
 - Install Qt with WebEngine and HttpServer modules
+
+⚠️ Note: Desktop notifications are not implemented for Windows yet.
 
 ### 2. Install Node.js
 ```bash

@@ -25,7 +25,7 @@ export default function DeleteEventDialog({ eventId }: DeleteEventDialogProps) {
 
   const deleteEvent = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/event/${eventId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/event/${eventId}`, {
         method: "DELETE",
       });
 

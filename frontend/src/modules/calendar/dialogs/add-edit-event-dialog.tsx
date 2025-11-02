@@ -4,7 +4,6 @@ import { type ReactNode, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { DateTimePicker } from "@/components/ui/date-time-picker";
 import {
   Form,
   FormControl,
@@ -32,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { COLORS } from "@/modules/calendar/constants";
 import { useCalendar } from "@/modules/calendar/contexts/calendar-context";
 import { useDisclosure } from "@/modules/calendar/hooks";
@@ -39,6 +39,7 @@ import type { IEvent } from "@/modules/calendar/interfaces";
 import { eventSchema, type TEventFormData } from "@/modules/calendar/schemas";
 import { DialogClose } from "@radix-ui/react-dialog";
 import { API_BASE_URL } from "@/types/backend-props";
+import { DateTimePickerModern } from "@/components/ui/datetime-picker-modern";
 
 interface IProps {
   children: ReactNode;
@@ -267,14 +268,30 @@ export function AddEditEventDialog({
               control={form.control}
               name="startDate"
               render={({ field }) => (
-                <DateTimePicker form={form} field={field} />
+                <FormItem>
+                  <DateTimePickerModern
+                    date={field.value}
+                    setDate={field.onChange}
+                    label="Start Date & Time"
+                    placeholder="Select start date and time"
+                  />
+                  <FormMessage />
+                </FormItem>
               )}
             />
             <FormField
               control={form.control}
               name="endDate"
               render={({ field }) => (
-                <DateTimePicker form={form} field={field} />
+                <FormItem>
+                  <DateTimePickerModern
+                    date={field.value}
+                    setDate={field.onChange}
+                    label="End Date & Time"
+                    placeholder="Select end date and time"
+                  />
+                  <FormMessage />
+                </FormItem>
               )}
             />
             <FormField
@@ -315,7 +332,7 @@ export function AddEditEventDialog({
               name="description"
               render={({ field, fieldState }) => (
                 <FormItem>
-                  <FormLabel className="required">Description</FormLabel>
+                  <FormLabel>Description</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
@@ -327,6 +344,53 @@ export function AddEditEventDialog({
                 </FormItem>
               )}
             />
+
+            {/* Reminder Section */}
+            <div className="border-t pt-4 mt-2">
+              <h3 className="text-sm font-medium mb-3">Reminder Settings</h3>
+
+              <FormField
+                control={form.control}
+                name="isReminderEnabled"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 mb-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Enable Reminder</FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        Get notified before this event starts
+                      </p>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              {form.watch("isReminderEnabled") && (
+                <FormField
+                  control={form.control}
+                  name="reminderTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <DateTimePickerModern
+                        date={field.value}
+                        setDate={field.onChange}
+                        label="Reminder Time"
+                        placeholder="When to remind you"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Set when you want to be reminded about this event
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
           </form>
         </Form>
         <ModalFooter className="flex justify-end gap-2">

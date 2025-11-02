@@ -14,23 +14,21 @@ class AlarmManager : public QObject
 public:
     explicit AlarmManager(QObject *parent = nullptr);
 
-    QJsonObject createAlarm(int activityId, const QString &alarmTime);
-    QJsonArray getAlarmsForActivity(int activityId);
-    bool deleteAlarm(int alarmId);
-    void checkAlarms(); // Called periodically
+    void checkAlarms();  // Check and trigger alarms
+    void reloadAlarms(); // Reload alarms from database (call after event changes)
 
 signals:
-    void alarmTriggered(int activityId, const QString &title);
+    void alarmTriggered(const QString &eventId, const QString &title);
 
 private slots:
     void onTimerTimeout();
 
 private:
     QTimer *m_checkTimer;
-    QMap<int, QDateTime> m_activeAlarms; // alarmId -> trigger time
+    QMap<QString, QDateTime> m_activeAlarms; // eventId -> trigger time
 
     void loadActiveAlarms();
-    void showNotification(int activityId, const QString &title);
+    void showNotification(const QString &eventId, const QString &title, const QString &category, const QString &startTime);
 };
 
 #endif

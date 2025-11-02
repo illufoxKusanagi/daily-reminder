@@ -134,6 +134,13 @@ void HttpServer::setupRoutes()
                             return addCorsHeaders(errorResponse(event["error"].toString()));
                         }
 
+                        // Reload alarms if this event has a reminder
+                        if (data.value("isReminderEnabled").toBool(false))
+                        {
+                            m_alarmManager->reloadAlarms();
+                            qInfo() << "⏰ Reloaded alarms after creating event with reminder";
+                        }
+
                         return addCorsHeaders(jsonResponse(event, QHttpServerResponse::StatusCode::Created));
                     });
 
@@ -163,6 +170,13 @@ void HttpServer::setupRoutes()
                             return addCorsHeaders(errorResponse(event["error"].toString()));
                         }
 
+                        // Reload alarms if reminder settings changed
+                        if (data.contains("isReminderEnabled") || data.contains("reminderTime"))
+                        {
+                            m_alarmManager->reloadAlarms();
+                            qInfo() << "⏰ Reloaded alarms after updating event reminder";
+                        }
+
                         return addCorsHeaders(jsonResponse(event));
                     });
 
@@ -176,6 +190,10 @@ void HttpServer::setupRoutes()
                         {
                             return addCorsHeaders(errorResponse("Failed to delete event"));
                         }
+
+                        // Reload alarms after deletion
+                        m_alarmManager->reloadAlarms();
+                        qInfo() << "⏰ Reloaded alarms after deleting event";
 
                         return addCorsHeaders(jsonResponse(QJsonObject{{"message", "Event deleted successfully"}}));
                     });
