@@ -7,12 +7,19 @@
 #include <QHttpHeaders>
 #include <QHostAddress>
 #include <QDebug>
+#include <QFile>
+#include <QFileInfo>
+#include <QDir>
+#include <QCoreApplication>
+#include <QMimeDatabase>
 
 HttpServer::HttpServer(ActivityManager *activityMgr, AlarmManager *alarmMgr, QObject *parent)
     : QObject(parent), m_activityManager(activityMgr), m_alarmManager(alarmMgr), m_port(0)
 {
     m_server = new QHttpServer(this);
+    m_frontendPath = findFrontendPath();
     setupRoutes();
+    setupStaticRoutes();
 }
 
 bool HttpServer::start(quint16 port)
@@ -222,4 +229,138 @@ QHttpServerResponse HttpServer::errorResponse(const QString &message, QHttpServe
     QJsonObject obj;
     obj["error"] = message;
     return jsonResponse(obj, code);
+}
+
+QString HttpServer::findFrontendPath()
+{
+    // Try to find frontend build directory
+    QStringList frontendPaths = {
+        QCoreApplication::applicationDirPath() + "/frontend",                // Relative to binary
+        QCoreApplication::applicationDirPath() + "/../share/daily-reminder", // System install
+        QDir::currentPath() + "/frontend/out",                               // Development
+        "/usr/share/daily-reminder",                                         // Linux system install
+        "/usr/local/share/daily-reminder"                                    // Alternative install
+    };
+
+    for (const QString &path : frontendPaths)
+    {
+        QString indexPath = path + "/index.html";
+        if (QFile::exists(indexPath))
+        {
+            qInfo() << "✅ Found frontend at:" << path;
+            return path;
+        }
+    }
+
+    qWarning() << "❌ Frontend not found! Tried paths:";
+    for (const QString &path : frontendPaths)
+    {
+        qWarning() << "  -" << path + "/index.html";
+    }
+    return QString();
+}
+
+QString HttpServer::getMimeType(const QString &filePath)
+{
+    QMimeDatabase mimeDb;
+    QMimeType mimeType = mimeDb.mimeTypeForFile(filePath);
+    QString mime = mimeType.name();
+
+    // Override for specific extensions that might not be detected correctly
+    if (filePath.endsWith(".js"))
+        return "application/javascript";
+    if (filePath.endsWith(".mjs"))
+        return "application/javascript";
+    if (filePath.endsWith(".css"))
+        return "text/css";
+    if (filePath.endsWith(".html"))
+        return "text/html";
+    if (filePath.endsWith(".json"))
+        return "application/json";
+    if (filePath.endsWith(".svg"))
+        return "image/svg+xml";
+    if (filePath.endsWith(".woff2"))
+        return "font/woff2";
+    if (filePath.endsWith(".woff"))
+        return "font/woff";
+
+    return mime;
+}
+
+void HttpServer::setupStaticRoutes()
+{
+    if (m_frontendPath.isEmpty())
+    {
+        qWarning() << "⚠️  Static file serving disabled - frontend path not found";
+        return;
+    }
+
+    // Serve static files with proper routing
+    m_server->route("<arg>", [this](const QUrl &url)
+                    {
+        QString path = url.path();
+        
+        // Skip API routes
+        if (path.startsWith("/api/"))
+        {
+            return QHttpServerResponse(QHttpServerResponse::StatusCode::NotFound);
+        }
+        
+        // Default to index.html for root
+        if (path == "/" || path.isEmpty())
+        {
+            path = "/index.html";
+        }
+
+        QString filePath = m_frontendPath + path;
+        QFileInfo fileInfo(filePath);
+
+        // If file doesn't exist and no extension, try .html
+        if (!fileInfo.exists() && !path.contains("."))
+        {
+            filePath = m_frontendPath + path + ".html";
+            fileInfo.setFile(filePath);
+        }
+
+        // Try to open and serve the file
+        if (fileInfo.exists() && fileInfo.isFile())
+        {
+            QFile file(filePath);
+            if (file.open(QIODevice::ReadOnly))
+            {
+                QByteArray content = file.readAll();
+                file.close();
+                
+                QString mimeType = getMimeType(filePath);
+                
+                QHttpServerResponse response(mimeType.toUtf8(), content);
+                
+                // Add caching headers for static assets
+                if (path.startsWith("/_next/static/"))
+                {
+                    QHttpHeaders headers = response.headers();
+                    headers.append("Cache-Control", "public, max-age=31536000, immutable");
+                    response.setHeaders(std::move(headers));
+                }
+                
+                return response;
+            }
+        }
+
+        // For client-side routing, return index.html
+        if (!path.contains("."))
+        {
+            QFile indexFile(m_frontendPath + "/index.html");
+            if (indexFile.open(QIODevice::ReadOnly))
+            {
+                QByteArray content = indexFile.readAll();
+                indexFile.close();
+                return QHttpServerResponse("text/html", content);
+            }
+        }
+
+        // 404 for missing files
+        return QHttpServerResponse(QHttpServerResponse::StatusCode::NotFound); });
+
+    qInfo() << "✅ Static file serving enabled from:" << m_frontendPath;
 }

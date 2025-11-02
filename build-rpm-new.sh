@@ -7,7 +7,7 @@ echo "🔨 Building Daily Reminder RPM package..."
 
 # Get project root and setup output directory
 PROJECT_ROOT=$(pwd)
-OUTPUT_DIR="$PROJECT_ROOT/output"
+OUTPUT_DIR="$PROJECT_ROOT/app_output"
 mkdir -p "$OUTPUT_DIR"
 
 # 1. Build frontend

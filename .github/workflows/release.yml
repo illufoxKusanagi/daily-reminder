@@ -1,0 +1,160 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g., v1.0.0)"
+        required: true
+        type: string
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          release_name: Daily Reminder ${{ steps.get_version.outputs.version }}
+          body: |
+            ## Daily Reminder Release ${{ steps.get_version.outputs.version }}
+
+            ### Downloads
+            - **Windows**: DailyReminder-Windows-x64.zip
+            - **Linux (Fedora/RHEL)**: daily-reminder-*.rpm
+
+            ### Installation
+
+            **Windows:**
+            1. Download `DailyReminder-Windows-x64.zip`
+            2. Extract the ZIP file
+            3. Run `DailyReminder.bat` or `backend.exe`
+
+            **Linux (RPM):**
+            ```bash
+            sudo rpm -ivh daily-reminder-*.rpm
+            daily-reminder
+            ```
+
+            ### Features
+            - 📅 Calendar view with daily activities
+            - ⏰ Reminder notifications
+            - 🔔 System tray support
+            - 🎨 Dark/Light theme toggle
+            - 💾 SQLite database storage
+
+            ### Changes
+            See commits for detailed changes.
+          draft: false
+          prerelease: false
+
+  build-windows:
+    needs: create-release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.7.0"
+          host: "windows"
+          target: "desktop"
+          arch: "win64_mingw"
+          modules: "qtwebengine qtwebchannel qthttpserver"
+
+      - name: Build Frontend
+        working-directory: ./frontend
+        run: |
+          npm install
+          npm run build
+
+      - name: Build Backend
+        working-directory: ./backend
+        run: |
+          mkdir build
+          cd build
+          cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build . --config Release
+
+      - name: Create Package
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path output/DailyReminder
+          Copy-Item backend/build/backend.exe output/DailyReminder/
+          Copy-Item -Recurse frontend/out/* output/DailyReminder/frontend/
+          windeployqt.exe --release --no-translations output/DailyReminder/backend.exe
+          @"
+          @echo off
+          start "" "%~dp0backend.exe"
+          "@ | Out-File -FilePath output/DailyReminder/DailyReminder.bat -Encoding ASCII
+          Compress-Archive -Path output/DailyReminder/* -DestinationPath DailyReminder-Windows-x64.zip
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./DailyReminder-Windows-x64.zip
+          asset_name: DailyReminder-Windows-x64.zip
+          asset_content_type: application/zip
+
+  build-linux:
+    needs: create-release
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
+
+    steps:
+      - name: Install dependencies
+        run: |
+          dnf install -y qt6-qtbase-devel qt6-qtwebengine-devel cmake gcc-c++ make rpm-build nodejs npm git
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build and Create RPM
+        run: |
+          cd frontend && npm install && npm run build && cd ..
+          cd backend && mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release .. && make -j$(nproc)
+          cd ../..
+          chmod +x build-rpm-new.sh
+          ./build-rpm-new.sh
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./output/daily-reminder-1.0.0-1.fc*.x86_64.rpm
+          asset_name: daily-reminder-1.0.0-linux-x86_64.rpm
+          asset_content_type: application/x-rpm

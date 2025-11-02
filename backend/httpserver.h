@@ -22,7 +22,10 @@ public:
 
 private:
     void setupRoutes();
+    void setupStaticRoutes();
     QJsonObject parseRequestBody(const QHttpServerRequest &request);
+    QString findFrontendPath();
+    QString getMimeType(const QString &filePath);
 
     QHttpServerResponse jsonResponse(const QJsonObject &obj, QHttpServerResponse::StatusCode code = QHttpServerResponse::StatusCode::Ok);
     QHttpServerResponse jsonResponse(const QJsonArray &arr, QHttpServerResponse::StatusCode code = QHttpServerResponse::StatusCode::Ok);
@@ -33,6 +36,7 @@ private:
     ActivityManager *m_activityManager;
     AlarmManager *m_alarmManager;
     quint16 m_port;
+    QString m_frontendPath;
 };
 
 #endif

@@ -1,0 +1,96 @@
+name: Build Windows Executable
+
+on:
+  push:
+    branches: [master, main]
+    tags:
+      - "v*"
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.7.0"
+          host: "windows"
+          target: "desktop"
+          arch: "win64_mingw"
+          modules: "qtwebengine qtwebchannel qthttpserver"
+          cache: true
+
+      - name: Build Frontend
+        working-directory: ./frontend
+        run: |
+          npm install
+          npm run build
+
+      - name: Configure Backend
+        working-directory: ./backend
+        run: |
+          mkdir build
+          cd build
+          cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ..
+
+      - name: Build Backend
+        working-directory: ./backend/build
+        run: |
+          cmake --build . --config Release
+
+      - name: Create Distribution Package
+        shell: powershell
+        run: |
+          # Create output directory
+          New-Item -ItemType Directory -Force -Path output/DailyReminder
+
+          # Copy backend executable
+          Copy-Item backend/build/backend.exe output/DailyReminder/
+
+          # Copy frontend files
+          Copy-Item -Recurse frontend/out/* output/DailyReminder/frontend/
+
+          # Run windeployqt to bundle Qt dependencies
+          windeployqt.exe --release --no-translations output/DailyReminder/backend.exe
+
+          # Create run script
+          @"
+          @echo off
+          start "" "%~dp0backend.exe"
+          "@ | Out-File -FilePath output/DailyReminder/DailyReminder.bat -Encoding ASCII
+
+      - name: Create ZIP archive
+        shell: powershell
+        run: |
+          Compress-Archive -Path output/DailyReminder/* -DestinationPath DailyReminder-Windows-x64.zip
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DailyReminder-Windows-x64
+          path: DailyReminder-Windows-x64.zip
+          retention-days: 30
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: DailyReminder-Windows-x64.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
