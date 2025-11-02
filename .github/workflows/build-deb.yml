@@ -1,0 +1,120 @@
+name: Build Debian Package
+
+on:
+  push:
+    branches: [master, main]
+    tags:
+      - "v*"
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  build-deb:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install Qt and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            qt6-base-dev \
+            qt6-webengine-dev \
+            libqt6webchannel6-dev \
+            cmake \
+            build-essential \
+            dpkg-dev \
+            fakeroot
+
+      - name: Install Qt6HttpServer from source
+        run: |
+          # Clone Qt HttpServer module
+          git clone https://code.qt.io/qt/qthttpserver.git
+          cd qthttpserver
+          git checkout 6.7
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_INSTALL_PREFIX=/usr ..
+          make -j$(nproc)
+          sudo make install
+
+      - name: Build Frontend
+        working-directory: ./frontend
+        run: |
+          npm install
+          npm run build
+
+      - name: Build Backend
+        working-directory: ./backend
+        run: |
+          mkdir -p build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make -j$(nproc)
+
+      - name: Create Debian Package
+        run: |
+          # Create package structure
+          PKG_DIR="daily-reminder_1.0.0_amd64"
+          mkdir -p "$PKG_DIR/DEBIAN"
+          mkdir -p "$PKG_DIR/usr/bin"
+          mkdir -p "$PKG_DIR/usr/share/daily-reminder"
+          mkdir -p "$PKG_DIR/usr/share/applications"
+
+          # Copy files
+          cp backend/build/backend "$PKG_DIR/usr/bin/daily-reminder"
+          cp -r frontend/out/* "$PKG_DIR/usr/share/daily-reminder/"
+
+          # Create desktop entry
+          cat > "$PKG_DIR/usr/share/applications/daily-reminder.desktop" <<'EOF'
+          [Desktop Entry]
+          Name=Daily Reminder
+          Comment=Calendar application with reminders
+          Exec=/usr/bin/daily-reminder
+          Icon=appointment-soon
+          Terminal=false
+          Type=Application
+          Categories=Office;Calendar;
+          EOF
+
+          # Create control file
+          cat > "$PKG_DIR/DEBIAN/control" <<'EOF'
+          Package: daily-reminder
+          Version: 1.0.0
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Depends: libqt6core6, libqt6gui6, libqt6widgets6, libqt6webenginecore6, libqt6webenginewidgets6, libqt6webchannel6, libqt6network6, libqt6sql6, libnotify-bin
+          Maintainer: illufoxKusanagi
+          Description: Desktop calendar application with reminders
+           A desktop calendar application for managing daily activities with reminders,
+           built with Qt 6 (backend REST API) and Next.js (frontend UI).
+          EOF
+
+          # Build the package
+          dpkg-deb --build "$PKG_DIR"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DailyReminder-Debian-amd64
+          path: "*.deb"
+          retention-days: 30
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: "*.deb"
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

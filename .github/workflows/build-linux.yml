@@ -21,6 +21,8 @@ jobs:
           dnf install -y \
             qt6-qtbase-devel \
             qt6-qtwebengine-devel \
+            qt6-qtwebchannel-devel \
+            qt6-qthttpserver-devel \
             cmake \
             gcc-c++ \
             make \
