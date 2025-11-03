@@ -1,53 +1,115 @@
 # Daily Reminder
 
-A desktop calendar application for managing daily activities with reminders, built with Qt 6 (backend REST API) and Next.js (frontend UI).
+A simple and beautiful desktop calendar application to help you manage your daily activities and never miss important events.
 
-> ⚠️ **Platform Support**: 
-> - **Linux**: Fully tested and supported (uses `notify-send` for desktop notifications)
-> - **Windows**: Experimental support (uses PowerShell toast notifications)
-> - **macOS**: Experimental support (uses `osascript` for notifications)
+## 📥 Download & Install
 
-## 🏗️ Architecture Overview
+**Get the latest version:** [Download Daily Reminder v0.3.5](https://github.com/illufoxKusanagi/daily-reminder/releases/tag/0.3.5)
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                Qt Desktop Application                           │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │         QWebEngineView (Embedded Chromium Browser)        │  │
-│  │  ┌─────────────────────────────────────────────────────┐  │  │
-│  │  │   Next.js Frontend (React + TypeScript)             │  │  │
-│  │  │   • Calendar UI (FullCalendar)                      │  │  │
-│  │  │   • Event dialogs (shadcn/ui)                       │  │  │
-│  │  │   • Category management                             │  │  │
-│  │  │   • Date/time pickers                               │  │  │
-│  │  └─────────────────────────────────────────────────────┘  │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                            │                                    │
-│              HTTP REST API │ (localhost:8080)                   │
-│                            ↓                                    │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │              QHttpServer (REST API)                       │  │
-│  │   GET    /api/event          - List all events            │  │
-│  │   POST   /api/event          - Create new event           │  │
-│  │   PUT    /api/event/:id      - Update event               │  │
-│  │   DELETE /api/event/:id      - Delete event               │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                            │                                    │
-│                            ↓                                    │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │                SQLite Database                            │  │
-│  │   events table:                                           │  │
-│  │   • id, category, title, description                      │  │
-│  │   • start_date, end_date, color                           │  │
-│  │   • reminder_time, is_reminder_enabled                    │  │
-│  └───────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
-```
+### Windows
+1. Download `DailyReminder-Windows-x64.zip`
+2. Extract the ZIP file to a folder
+3. Run `DailyReminder.bat` or `backend.exe`
+4. The app will open automatically
 
-## 🌟 Features
+### Linux (RPM - Fedora/RHEL/CentOS)
+1. Download `daily-reminder-*.rpm`
+2. Install with:
+   ```bash
+   sudo rpm -ivh daily-reminder-*.rpm
+   ```
+3. Launch from your application menu or run `daily-reminder` in terminal
 
-- ✅ **Calendar View**: Monthly calendar with color-coded events
-- ✅ **Event Management**: Create, edit, delete events with categories
+### Linux (DEB - Ubuntu/Debian)
+1. Download `daily-reminder_*.deb`
+2. Install with:
+   ```bash
+   sudo dpkg -i daily-reminder_*.deb
+   ```
+3. Launch from your application menu or run `daily-reminder` in terminal
+
+> **Note:** Linux requires `notify-send` for notifications (usually pre-installed)
+
+## ✨ What is Daily Reminder?
+
+Daily Reminder is a desktop application that helps you keep track of your schedule with:
+
+- **📅 Visual Calendar** - See all your events in a clean monthly view
+- **🎨 Color Categories** - Organize events with customizable colored categories (Work, Personal, Health, etc.)
+- **⏰ Smart Reminders** - Get desktop notifications before your events start
+- **🌓 Dark/Light Mode** - Choose the theme that suits your preference
+- **💾 Local Storage** - All your data stays on your computer, completely private
+
+## 🎯 How to Use
+
+### Creating Your First Event
+
+1. **Click any date** on the calendar to create a new event
+2. Fill in the details:
+   - **Title**: What's the event?
+   - **Category**: Choose or create a category (Work, Personal, etc.)
+   - **Date & Time**: When does it start and end?
+   - **Description**: Add any notes (optional)
+   - **Reminder**: Set when you want to be notified
+3. Click **Save** - that's it!
+
+### Managing Events
+
+- **View**: Click any event on the calendar to see full details
+- **Edit**: Click the edit button to change event information
+- **Delete**: Remove events you no longer need
+- **Categories**: Create custom categories with your favorite colors
+
+### Setting Up Reminders
+
+1. When creating/editing an event, toggle **Enable Reminder**
+2. Choose how long before the event you want to be notified
+3. You'll get a desktop notification at that time!
+
+## 🎨 Features
+
+- ✅ **Easy to Use** - Intuitive interface, no learning curve
+- ✅ **Fast & Lightweight** - Runs smoothly on your computer
+- ✅ **Privacy First** - All data stored locally, no internet required
+- ✅ **Cross-Platform** - Works on Windows and Linux
+- ✅ **System Tray** - Runs quietly in the background
+- ✅ **No Ads** - Completely free and open-source
+
+## 🖥️ System Requirements
+
+- **Windows**: Windows 10 or later
+- **Linux**: Any modern distribution (Fedora, Ubuntu, Debian, etc.)
+- **Memory**: 100MB RAM
+- **Storage**: 50MB disk space
+
+## ❓ Troubleshooting
+
+**App won't start?**
+- Make sure you have the required dependencies installed
+- On Linux, check if `libnotify` is installed
+
+**Notifications not working?**
+- Linux: Install `libnotify-bin` package
+- Windows: Check your Windows notification settings
+
+**Can't see the calendar?**
+- Try refreshing by restarting the app
+- Check if the app is running (look for it in system tray)
+
+## 💡 Tips & Tricks
+
+- Use **different colors** for different types of activities
+- Set **recurring reminders** for daily tasks
+- Use the **system tray icon** to quickly open the app
+- **Dark mode** is easier on the eyes for night use
+
+## 🆘 Need Help?
+
+Found a bug or have a suggestion? [Open an issue on GitHub](https://github.com/illufoxKusanagi/daily-reminder/issues)
+
+---
+
+## 🛠️ For Developers
 - ✅ **Categories**: Work, Personal, Health, Shopping, Exercise, Study, Social, Home, Other
 - ✅ **Reminders**: Set reminder times with enable/disable toggle
 - ✅ **Alarm/Reminder System**: Qt-based timer that checks every 30 seconds and triggers system notifications
