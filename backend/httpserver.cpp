@@ -43,11 +43,10 @@ bool HttpServer::start(quint16 port)
         }
     }
 
-    if (!m_server->bind(m_tcpServer.get()))
-    {
-        qCritical() << "Failed to bind HTTP server to TCP server";
-        return false;
-    }
+    auto bindResult = m_server->bind(m_tcpServer.get());
+    Q_UNUSED(bindResult);
+
+    qDebug() << "HTTP Server listening on port" << port;
 
     m_port = m_tcpServer->serverPort();
     qInfo() << "🚀 Daily Reminder Backend Server is running on http://localhost:" << m_port;
@@ -88,13 +87,13 @@ void HttpServer::setupRoutes()
 {
     auto addCorsHeaders = [](QHttpServerResponse response)
     {
-        QHttpHeaders headers = response.headers();
-        headers.append(QHttpHeaders::WellKnownHeader::AccessControlAllowOrigin, "*");
-        headers.append(QHttpHeaders::WellKnownHeader::AccessControlAllowMethods, "GET, POST, PUT, DELETE, PATCH, OPTIONS");
-        headers.append(QHttpHeaders::WellKnownHeader::AccessControlAllowHeaders, "Content-Type, Authorization");
-        headers.append(QHttpHeaders::WellKnownHeader::ContentType, "application/json");
+        auto headers = response.headers();
+        headers.append("Access-Control-Allow-Origin", "*");
+        headers.append("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+        headers.append("Access-Control-Allow-Headers", "Content-Type, Authorization");
+        headers.append("Content-Type", "application/json");
         headers.append("Access-Control-Max-Age", "86400");
-        response.setHeaders(std::move(headers));
+        response.setHeaders(headers);
         return response;
     };
 
@@ -338,9 +337,9 @@ void HttpServer::setupStaticRoutes()
                 // Add caching headers for static assets
                 if (path.startsWith("/_next/static/"))
                 {
-                    QHttpHeaders headers = response.headers();
+                    auto headers = response.headers();
                     headers.append("Cache-Control", "public, max-age=31536000, immutable");
-                    response.setHeaders(std::move(headers));
+                    response.setHeaders(headers);
                 }
                 
                 return response;
