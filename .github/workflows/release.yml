@@ -83,11 +83,7 @@ jobs:
           target: "desktop"
           arch: "win64_mingw"
           modules: "qtwebchannel qthttpserver"
-          tools: "tools_mingw,qt.tools.win64_mingw1310"
-
-      - name: Setup MinGW
-        run: |
-          echo "${{ env.IQTA_TOOLS }}/mingw1310_64/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          setup-python: false
 
       - name: Build Frontend
         working-directory: ./frontend
@@ -98,7 +94,7 @@ jobs:
       - name: Build Backend
         working-directory: ./backend
         run: |
-          mkdir build
+          mkdir -p build
           cd build
           cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ..
           cmake --build . --config Release
