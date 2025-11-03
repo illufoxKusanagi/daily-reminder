@@ -36,9 +36,10 @@ jobs:
         working-directory: ./backend
         shell: cmd
         run: |
+          set PATH=%Qt6_DIR%\..\..\..\Tools\mingw1120_64\bin;%PATH%
           mkdir build
           cd build
-          cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ ..
+          cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ..
           cmake --build . --config Release
 
       - name: Create Distribution Package
