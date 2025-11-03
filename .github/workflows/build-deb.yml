@@ -11,7 +11,7 @@ on:
 
 jobs:
   build-deb:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout code
@@ -28,23 +28,12 @@ jobs:
           sudo apt-get install -y \
             qt6-base-dev \
             qt6-webengine-dev \
-            libqt6webchannel6-dev \
+            qt6-webchannel-dev \
+            qt6-httpserver-dev \
             cmake \
             build-essential \
             dpkg-dev \
             fakeroot
-
-      - name: Install Qt6HttpServer from source
-        run: |
-          # Clone Qt HttpServer module
-          git clone https://code.qt.io/qt/qthttpserver.git
-          cd qthttpserver
-          git checkout 6.7
-          mkdir build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_INSTALL_PREFIX=/usr ..
-          make -j$(nproc)
-          sudo make install
 
       - name: Build Frontend
         working-directory: ./frontend

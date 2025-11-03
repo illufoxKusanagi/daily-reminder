@@ -87,7 +87,7 @@ jobs:
           host: "windows"
           target: "desktop"
           arch: "win64_mingw"
-          modules: "qtwebengine qtwebchannel qthttpserver"
+          modules: "qtwebchannel qthttpserver"
 
       - name: Build Frontend
         working-directory: ./frontend
