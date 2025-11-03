@@ -11,33 +11,28 @@ on:
 
 jobs:
   build-deb:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Qt 6.7
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: "6.7.0"
-          host: "linux"
-          target: "desktop"
-          arch: "gcc_64"
-          modules: "qtwebchannel qthttpserver"
-          setup-python: false
-
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          dnf install -y \
+            qt6-qtbase-devel \
+            qt6-qtwebengine-devel \
+            qt6-qtwebchannel-devel \
+            qt6-qthttpserver-devel \
             cmake \
-            build-essential \
-            dpkg-dev \
-            fakeroot \
+            gcc-c++ \
+            make \
+            rpm-build \
             nodejs \
             npm \
-            libxcb-cursor0
+            git
+
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Build Frontend
         working-directory: ./frontend
