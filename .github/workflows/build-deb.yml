@@ -27,6 +27,7 @@ jobs:
             gcc-c++ \
             make \
             rpm-build \
+            dpkg \
             nodejs \
             npm \
             git
