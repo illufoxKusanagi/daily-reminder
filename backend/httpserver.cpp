@@ -42,11 +42,7 @@ bool HttpServer::start(quint16 port)
         }
     }
 
-    if (!m_server->bind(m_tcpServer.get()))
-    {
-        qCritical() << "Failed to bind HTTP server to TCP server";
-        return false;
-    }
+    m_server->bind(m_tcpServer.get());
 
     m_port = m_tcpServer->serverPort();
     qInfo() << "🚀 Daily Reminder Backend Server is running on http://localhost:" << m_port;
@@ -85,7 +81,7 @@ QJsonObject HttpServer::parseRequestBody(const QHttpServerRequest &request)
 
 void HttpServer::setupRoutes()
 {
-    auto addCorsHeaders = [](QHttpServerResponse response) -> QHttpServerResponse
+    auto addCorsHeaders = [](QHttpServerResponse response)
     {
         return response;
     };
