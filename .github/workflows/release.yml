@@ -106,6 +106,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path output/DailyReminder
           Copy-Item backend/build/backend.exe output/DailyReminder/
+          New-Item -ItemType Directory -Force -Path output/DailyReminder/frontend
           Copy-Item -Recurse frontend/out/* output/DailyReminder/frontend/
           windeployqt.exe --release --no-translations output/DailyReminder/backend.exe
           @"

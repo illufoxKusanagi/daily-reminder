@@ -53,6 +53,7 @@ jobs:
           Copy-Item backend/build/backend.exe output/DailyReminder/
 
           # Copy frontend files
+          New-Item -ItemType Directory -Force -Path output/DailyReminder/frontend
           Copy-Item -Recurse frontend/out/* output/DailyReminder/frontend/
 
           # Run windeployqt to bundle Qt dependencies
