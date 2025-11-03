@@ -36,10 +36,11 @@ jobs:
         working-directory: ./backend
         shell: cmd
         run: |
-          set PATH=%Qt6_DIR%\..\..\..\Tools\mingw1120_64\bin;%PATH%
+          set PATH=D:\a\daily-reminder\Qt\Tools\mingw1120_64\bin;%PATH%
+          set CMAKE_PREFIX_PATH=D:\a\daily-reminder\Qt\6.7.0\mingw_64
           mkdir build
           cd build
-          cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ..
+          cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_MAKE_PROGRAM=D:\a\daily-reminder\Qt\Tools\mingw1120_64\bin\mingw32-make.exe ..
           cmake --build . --config Release
 
       - name: Create Distribution Package
