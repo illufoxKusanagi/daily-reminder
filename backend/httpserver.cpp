@@ -4,7 +4,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
-#include <QHttpHeaders>
 #include <QHostAddress>
 #include <QDebug>
 #include <QFile>
@@ -43,10 +42,11 @@ bool HttpServer::start(quint16 port)
         }
     }
 
-    auto bindResult = m_server->bind(m_tcpServer.get());
-    Q_UNUSED(bindResult);
-
-    qDebug() << "HTTP Server listening on port" << port;
+    if (!m_server->bind(m_tcpServer.get()))
+    {
+        qCritical() << "Failed to bind HTTP server to TCP server";
+        return false;
+    }
 
     m_port = m_tcpServer->serverPort();
     qInfo() << "🚀 Daily Reminder Backend Server is running on http://localhost:" << m_port;
@@ -85,15 +85,8 @@ QJsonObject HttpServer::parseRequestBody(const QHttpServerRequest &request)
 
 void HttpServer::setupRoutes()
 {
-    auto addCorsHeaders = [](QHttpServerResponse response)
+    auto addCorsHeaders = [](QHttpServerResponse response) -> QHttpServerResponse
     {
-        auto headers = response.headers();
-        headers.append("Access-Control-Allow-Origin", "*");
-        headers.append("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
-        headers.append("Access-Control-Allow-Headers", "Content-Type, Authorization");
-        headers.append("Content-Type", "application/json");
-        headers.append("Access-Control-Max-Age", "86400");
-        response.setHeaders(headers);
         return response;
     };
 
@@ -333,14 +326,6 @@ void HttpServer::setupStaticRoutes()
                 QString mimeType = getMimeType(filePath);
                 
                 QHttpServerResponse response(mimeType.toUtf8(), content);
-                
-                // Add caching headers for static assets
-                if (path.startsWith("/_next/static/"))
-                {
-                    auto headers = response.headers();
-                    headers.append("Cache-Control", "public, max-age=31536000, immutable");
-                    response.setHeaders(headers);
-                }
                 
                 return response;
             }
