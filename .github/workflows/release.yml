@@ -75,15 +75,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
           version: "6.7.0"
           host: "windows"
           target: "desktop"
-          arch: "win64_mingw"
+          arch: "win64_msvc2019_64"
           modules: "qtwebchannel qthttpserver"
-          tools: "tools_mingw90"
 
       - name: Build Frontend
         working-directory: ./frontend
@@ -94,12 +96,9 @@ jobs:
       - name: Build Backend
         working-directory: ./backend
         run: |
-          $mingwPath = Join-Path $env:IQTA_TOOLS "mingw900_64/bin"
-          $env:PATH = "$mingwPath;$env:PATH"
-          Remove-Item -Path "C:/mingw64" -Recurse -Force -ErrorAction SilentlyContinue
           mkdir build
           cd build
-          cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ..
+          cmake -G "Ninja" -DCMAKE_BUILD_TYPE=Release ..
           cmake --build . --config Release
 
       - name: Create Package
