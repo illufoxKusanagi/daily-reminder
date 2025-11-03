@@ -27,7 +27,7 @@ jobs:
           host: "windows"
           target: "desktop"
           arch: "win64_msvc2019_64"
-          modules: "qtwebchannel qthttpserver qtwebengine"
+          modules: "qtwebchannel qthttpserver qtwebengine qtpositioning"
 
       - name: Build Frontend
         working-directory: ./frontend
