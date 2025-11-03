@@ -17,11 +17,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
-
       - name: Install Qt and dependencies
         run: |
           sudo apt-get update
@@ -33,7 +28,9 @@ jobs:
             cmake \
             build-essential \
             dpkg-dev \
-            fakeroot
+            fakeroot \
+            nodejs \
+            npm
 
       - name: Build Frontend
         working-directory: ./frontend
