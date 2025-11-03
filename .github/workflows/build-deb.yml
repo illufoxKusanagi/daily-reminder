@@ -11,27 +11,33 @@ on:
 
 jobs:
   build-deb:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Qt and dependencies
+      - name: Install Qt 6.7
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.7.0"
+          host: "linux"
+          target: "desktop"
+          arch: "gcc_64"
+          modules: "qtwebchannel qthttpserver"
+          setup-python: false
+
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            qt6-base-dev \
-            qt6-webengine-dev \
-            qt6-webchannel-dev \
-            qt6-websockets-dev \
-            qt6-httpserver-dev \
             cmake \
             build-essential \
             dpkg-dev \
             fakeroot \
             nodejs \
-            npm
+            npm \
+            libxcb-cursor0
 
       - name: Build Frontend
         working-directory: ./frontend
