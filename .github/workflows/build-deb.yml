@@ -24,6 +24,7 @@ jobs:
             qt6-base-dev \
             qt6-webengine-dev \
             qt6-webchannel-dev \
+            qt6-websockets-dev \
             qt6-httpserver-dev \
             cmake \
             build-essential \

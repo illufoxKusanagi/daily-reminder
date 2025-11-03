@@ -26,6 +26,11 @@ jobs:
           arch: "win64_mingw"
           modules: "qtwebchannel qthttpserver"
           cache: true
+          tools: "tools_mingw,qt.tools.win64_mingw1310"
+
+      - name: Setup MinGW
+        run: |
+          echo "${{ env.IQTA_TOOLS }}/mingw1310_64/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Build Frontend
         working-directory: ./frontend
